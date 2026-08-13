@@ -1,6 +1,19 @@
+<div align="center">
+
 # Enterprise E-Commerce Platform & Section Content Engine
 
 A modern, high-performance web architecture built on Next.js 16 (App Router), React 19, TypeScript, and Supabase. Engineered for high-throughput product management, dynamic section-based content publishing, and automated VietQR transaction settlements via PayOS integration.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16_App_Router-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-v4.0-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS 4" />
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
+  <img src="https://img.shields.io/badge/PayOS-VietQR_Settlement-0052FF?style=for-the-badge&logo=quicklook&logoColor=white" alt="PayOS" />
+</p>
+
+</div>
 
 ---
 
@@ -18,15 +31,14 @@ A modular content management subsystem enabling non-technical users to construct
 - **Dual-Device Viewport Engine**: Real-time side-by-side rendering previewing mobile (`375px`) and desktop viewports instantaneously.
 - **Intersectional Ad Slots**: Native capability to inject promotional cards between content sections.
 
-![Section-Based Content Builder](./public/readme/editor.png)
+![Section-Based Content Builder & Live Preview](./public/readme/blog_editor.png)
 
-![Content Reader & Ad Insertion](./public/readme/blog_reader.png)
-
-### 3. Merchandising Dashboard & Automated Settlement Engine
+### 2. Storefront Experience & Merchandising Dashboard
+- **Storefront Client**: High-performance storefront client featuring server-side rendering, dynamic category filtering, and semantic article display.
 - **Drag-and-Drop Reordering**: Interactive featured product prioritization powered by `@hello-pangea/dnd`.
 - **Automated Settlement Gateway**: Synchronous VietQR generation and webhook-driven transaction reconciliation powered by PayOS API.
 
-![Admin Product Management](./public/readme/products_admin.png)
+![Storefront Landing Page](./public/readme/home.png)
 
 ---
 
