@@ -5,7 +5,7 @@ import { ToastProvider } from '@/shared/context/ToastContext';
 import { CartProvider } from '@/shared/context/CartContext';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maikimtuyen.vn'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maikimtuyen.vercel.app'),
   title: {
     default: 'MAI KIM TUYẾN - Sỉ & Lẻ Bột Kim Tuyến, Bột Màu, Băng Keo, Sơn Xịt',
     template: '%s | MAI KIM TUYẾN',
