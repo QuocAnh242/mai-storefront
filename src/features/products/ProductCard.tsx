@@ -23,7 +23,7 @@ export function ProductCard({ product }: ProductCardProps) {
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  const detailUrl = `/san-pham/${product.id}`;
+  const detailUrl = `/san-pham/${product.slug || product.id}`;
 
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 hover:border-sky-300 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group">
