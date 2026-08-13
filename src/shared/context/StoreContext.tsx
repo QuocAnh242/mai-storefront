@@ -34,6 +34,7 @@ interface StoreContextType {
 
   createOrder: (order: Omit<Order, 'id' | 'createdAt' | 'orderCode'>) => Promise<Order>;
   updateOrderStatus: (orderCode: string, status: Order['paymentStatus']) => void;
+  deleteOrder: (orderCode: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -43,88 +44,110 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [settings, setSettings] = useState<StoreSettings>(INITIAL_STORE_SETTINGS);
+  const [settings] = useState<StoreSettings>(INITIAL_STORE_SETTINGS);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Load Initial Data from LocalStorage or Supabase
+  // Load all data from Supabase on mount
   useEffect(() => {
-    const localProds = localStorage.getItem('mkt_products');
-    const localCats = localStorage.getItem('mkt_categories');
-    const localBlogs = localStorage.getItem('mkt_blogs');
-    const localOrders = localStorage.getItem('mkt_orders');
-
-    if (localProds) setProducts(JSON.parse(localProds));
-    else setProducts(INITIAL_PRODUCTS);
-
-    if (localCats) setCategories(JSON.parse(localCats));
-    else setCategories(INITIAL_CATEGORIES);
-
-    if (localBlogs) setBlogs(JSON.parse(localBlogs));
-    else setBlogs(INITIAL_BLOGS);
-
-    if (localOrders) setOrders(JSON.parse(localOrders));
-
-    // Async sync with Supabase if configured
-    if (isSupabaseConfigured()) {
-      supabase.from('products').select('*').then(({ data }) => {
-        if (data && data.length > 0) {
-          // Map DB fields to camelCase
-          const mapped: Product[] = data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            slug: item.slug,
-            price: Number(item.price),
-            originalPrice: item.original_price ? Number(item.original_price) : undefined,
-            unit: item.unit,
-            description: item.description,
-            categoryId: item.category_id,
-            categoryName: item.category_name,
-            subcategoryId: item.subcategory_id,
-            subcategoryName: item.subcategory_name,
-            images: item.images || [],
-            isFeatured: item.is_featured,
-            displayOrder: item.display_order || 0,
-            inStock: item.in_stock,
-            specs: item.specs || {},
-            createdAt: item.created_at,
-          }));
-          setProducts(mapped);
-        } else if (data && data.length === 0) {
-          setProducts([]);
-          localStorage.removeItem('mkt_products');
-        }
-      });
+    if (!isSupabaseConfigured()) {
+      // No DB: use hardcoded initial data
+      setProducts(INITIAL_PRODUCTS);
+      setCategories(INITIAL_CATEGORIES);
+      setBlogs(INITIAL_BLOGS);
+      return;
     }
+
+    // Products
+    supabase.from('products').select('*').then(({ data }) => {
+      if (data && data.length > 0) {
+        setProducts(data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          slug: item.slug,
+          price: Number(item.price),
+          originalPrice: item.original_price ? Number(item.original_price) : undefined,
+          unit: item.unit,
+          description: item.description,
+          categoryId: item.category_id,
+          categoryName: item.category_name,
+          subcategoryId: item.subcategory_id,
+          subcategoryName: item.subcategory_name,
+          images: item.images || [],
+          isFeatured: item.is_featured,
+          displayOrder: item.display_order || 0,
+          inStock: item.in_stock,
+          specs: item.specs || {},
+          createdAt: item.created_at,
+        })));
+      } else {
+        setProducts(INITIAL_PRODUCTS);
+      }
+    });
+
+    // Categories
+    supabase.from('categories').select('*').then(({ data }) => {
+      if (data && data.length > 0) {
+        setCategories(data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          description: item.description,
+          subcategories: item.subcategories || [],
+        })));
+      } else {
+        setCategories(INITIAL_CATEGORIES);
+      }
+    });
+
+    // Blogs
+    supabase.from('blogs').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data && data.length > 0) {
+        setBlogs(data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          slug: item.slug,
+          thumbnail: item.thumbnail,
+          summary: item.summary,
+          content: item.content,
+          author: item.author,
+          isPublished: item.is_published,
+          createdAt: item.created_at,
+        })));
+      } else {
+        setBlogs(INITIAL_BLOGS);
+      }
+    });
+
+    // Orders
+    supabase.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data) {
+        setOrders(data.map((item: any) => ({
+          id: item.id,
+          orderCode: item.order_code,
+          customerName: item.customer_name,
+          customerPhone: item.customer_phone,
+          customerAddress: item.customer_address,
+          customerNote: item.customer_note,
+          totalAmount: Number(item.total_amount),
+          paymentMethod: item.payment_method,
+          paymentStatus: item.payment_status,
+          items: item.items || [],
+          payosCheckoutUrl: item.payos_checkout_url,
+          payosQrCodeUrl: item.payos_qr_code_url,
+          createdAt: item.created_at,
+          paidAt: item.paid_at,
+        })));
+      }
+    });
   }, []);
-
-  // Save to LocalStorage whenever state changes
-  useEffect(() => {
-    if (products.length) {
-      localStorage.setItem('mkt_products', JSON.stringify(products));
-    } else {
-      localStorage.removeItem('mkt_products');
-    }
-  }, [products]);
-
-  useEffect(() => {
-    if (categories.length) localStorage.setItem('mkt_categories', JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    if (blogs.length) localStorage.setItem('mkt_blogs', JSON.stringify(blogs));
-  }, [blogs]);
-
-  useEffect(() => {
-    if (orders.length) localStorage.setItem('mkt_orders', JSON.stringify(orders));
-  }, [orders]);
 
   // Derived featured products sorted by displayOrder
   const featuredProducts = products
     .filter((p) => p.isFeatured)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  // Product Actions
+  // ── Product Actions ──────────────────────────────────────────────────────────
   const addProduct = (newProd: Omit<Product, 'id' | 'createdAt'>) => {
     const product: Product = {
       ...newProd,
@@ -156,9 +179,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProduct = (id: string, updatedFields: Partial<Product>) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
-    );
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p)));
 
     if (isSupabaseConfigured()) {
       const dbPayload: any = {};
@@ -176,7 +197,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (updatedFields.isFeatured !== undefined) dbPayload.is_featured = updatedFields.isFeatured;
       if (updatedFields.displayOrder !== undefined) dbPayload.display_order = updatedFields.displayOrder;
       if (updatedFields.inStock !== undefined) dbPayload.in_stock = updatedFields.inStock;
-
       supabase.from('products').update(dbPayload).eq('id', id).then();
     }
   };
@@ -190,7 +210,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const clearAllProducts = () => {
     setProducts([]);
-    localStorage.removeItem('mkt_products');
     if (isSupabaseConfigured()) {
       supabase.from('products').delete().neq('id', '').then();
     }
@@ -199,10 +218,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const reorderFeaturedProducts = (reorderedList: Product[]) => {
     const updatedProducts = products.map((p) => {
       const idx = reorderedList.findIndex((item) => item.id === p.id);
-      if (idx !== -1) {
-        return { ...p, displayOrder: idx + 1 };
-      }
-      return p;
+      return idx !== -1 ? { ...p, displayOrder: idx + 1 } : p;
     });
     setProducts(updatedProducts);
 
@@ -213,23 +229,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Category Actions
+  // ── Category Actions ─────────────────────────────────────────────────────────
   const addCategory = (cat: Omit<Category, 'id'>) => {
     const category: Category = { ...cat, id: `cat-${Date.now()}` };
     setCategories((prev) => [...prev, category]);
   };
 
   const updateCategory = (id: string, cat: Partial<Category>) => {
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...cat } : c))
-    );
+    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...cat } : c)));
   };
 
   const deleteCategory = (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
-  // Blog Actions
+  // ── Blog Actions ─────────────────────────────────────────────────────────────
   const addBlogPost = (blog: Omit<BlogPost, 'id' | 'createdAt'>) => {
     const post: BlogPost = {
       ...blog,
@@ -240,16 +254,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateBlogPost = (id: string, blog: Partial<BlogPost>) => {
-    setBlogs((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...blog } : b))
-    );
+    setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...blog } : b)));
   };
 
   const deleteBlogPost = (id: string) => {
     setBlogs((prev) => prev.filter((b) => b.id !== id));
   };
 
-  // Order Actions
+  // ── Order Actions ────────────────────────────────────────────────────────────
   const createOrder = async (
     orderInput: Omit<Order, 'id' | 'createdAt' | 'orderCode'>
   ): Promise<Order> => {
@@ -283,9 +295,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateOrderStatus = (orderCode: string, status: Order['paymentStatus']) => {
+    const paidAt = status === 'paid' ? new Date().toISOString() : undefined;
     setOrders((prev) =>
-      prev.map((o) => (o.orderCode === orderCode ? { ...o, paymentStatus: status, paidAt: status === 'paid' ? new Date().toISOString() : o.paidAt } : o))
+      prev.map((o) => (o.orderCode === orderCode ? { ...o, paymentStatus: status, paidAt: paidAt ?? o.paidAt } : o))
     );
+
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('orders')
+        .update({ payment_status: status, ...(paidAt ? { paid_at: paidAt } : {}) })
+        .eq('order_code', orderCode)
+        .then(({ error }) => {
+          if (error) console.error('Failed to update order status in Supabase:', error);
+        });
+    }
+  };
+
+  const deleteOrder = async (orderCode: string): Promise<{ success: boolean; message: string }> => {
+    const order = orders.find((o) => o.orderCode === orderCode);
+    if (!order) return { success: false, message: 'Không tìm thấy đơn hàng.' };
+    if (order.paymentStatus === 'paid') {
+      return { success: false, message: 'Không thể xóa đơn hàng đã thanh toán.' };
+    }
+
+    setOrders((prev) => prev.filter((o) => o.orderCode !== orderCode));
+
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.from('orders').delete().eq('order_code', orderCode);
+      if (error) {
+        console.error('Failed to delete order from Supabase:', error);
+        return { success: false, message: 'Xóa thất bại: ' + error.message };
+      }
+    }
+
+    return { success: true, message: `Đã xóa đơn ${orderCode}.` };
   };
 
   return (
@@ -314,6 +357,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         deleteBlogPost,
         createOrder,
         updateOrderStatus,
+        deleteOrder,
       }}
     >
       {children}

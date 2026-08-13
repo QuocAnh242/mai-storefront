@@ -1,11 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
-import { ShoppingBag, CheckCircle, Clock, Phone, MapPin, QrCode } from 'lucide-react';
+import { ShoppingBag, CheckCircle, Clock, Phone, MapPin, QrCode, Trash2 } from 'lucide-react';
 
 export default function AdminDonHangPage() {
-  const { orders, updateOrderStatus } = useStore();
+  const { orders, updateOrderStatus, deleteOrder } = useStore();
+  const [deletingCode, setDeletingCode] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  const showToast = (msg: string, ok: boolean) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleDelete = async (orderCode: string) => {
+    if (!confirm(`Xóa đơn hàng ${orderCode}? Hành động này không thể hoàn tác.`)) return;
+    setDeletingCode(orderCode);
+    const result = await deleteOrder(orderCode);
+    setDeletingCode(null);
+    showToast(result.message, result.success);
+  };
 
   const formatVND = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -13,6 +28,15 @@ export default function AdminDonHangPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-bold flex items-center gap-2 transition-all ${
+          toast.ok ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          {toast.ok ? <CheckCircle className="w-4 h-4" /> : <span>✕</span>}
+          {toast.msg}
+        </div>
+      )}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
         <div>
           <h1 className="text-xl font-black text-slate-900 uppercase flex items-center gap-2">
@@ -44,6 +68,7 @@ export default function AdminDonHangPage() {
                   <th className="p-3.5">Hình thức</th>
                   <th className="p-3.5">Trạng thái thanh toán</th>
                   <th className="p-3.5 text-right">Đổi trạng thái</th>
+                  <th className="p-3.5 text-center">Xóa</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -106,6 +131,24 @@ export default function AdminDonHangPage() {
                         </button>
                       ) : (
                         <span className="text-[11px] text-slate-400 italic">Hoàn tất</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      {order.paymentStatus === 'pending' ? (
+                        <button
+                          onClick={() => handleDelete(order.orderCode)}
+                          disabled={deletingCode === order.orderCode}
+                          title="Xóa đơn hàng chưa thanh toán"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          {deletingCode === order.orderCode
+                            ? <span className="text-[10px]">...</span>
+                            : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      ) : (
+                        <span title="Không thể xóa đơn đã thanh toán" className="text-slate-200 cursor-not-allowed inline-block p-1.5">
+                          <Trash2 className="w-4 h-4" />
+                        </span>
                       )}
                     </td>
                   </tr>

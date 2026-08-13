@@ -28,9 +28,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { showToast } = useToast();
 
-  // Load Cart from LocalStorage
+  // Load Cart from sessionStorage (clears when browser is closed)
   useEffect(() => {
-    const saved = localStorage.getItem('mkt_cart');
+    const saved = sessionStorage.getItem('mkt_cart');
     if (saved) {
       try {
         setCart(JSON.parse(saved));
@@ -40,9 +40,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save Cart to LocalStorage
+  // Save Cart to sessionStorage
   useEffect(() => {
-    localStorage.setItem('mkt_cart', JSON.stringify(cart));
+    sessionStorage.setItem('mkt_cart', JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (product: Product, quantity = 1) => {
@@ -78,7 +78,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCart([]);
-    localStorage.removeItem('mkt_cart');
+    sessionStorage.removeItem('mkt_cart');
   };
 
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);

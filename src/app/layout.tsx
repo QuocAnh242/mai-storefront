@@ -5,12 +5,50 @@ import { ToastProvider } from '@/shared/context/ToastContext';
 import { CartProvider } from '@/shared/context/CartContext';
 
 export const metadata: Metadata = {
-  title: 'MAI KIM TUYẾN - Sỉ & Lẻ Kim Tuyến, Bột Màu, Băng Keo, Sơn Xịt, Keo Dán',
-  description: 'Cửa hàng vật tư MAI KIM TUYẾN chuyên bán sỉ & lẻ Bột Kim Tuyến đủ size, Bột Camay, Bột Dạ Quang, Bột Phản Quang, Bột Màu, Băng Keo các loại, Sơn Xịt, Keo Dán và Xi Đánh Giày. Giao toàn quốc.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maikimtuyen.vn'),
+  title: {
+    default: 'MAI KIM TUYẾN - Sỉ & Lẻ Bột Kim Tuyến, Bột Màu, Băng Keo, Sơn Xịt',
+    template: '%s | MAI KIM TUYẾN',
+  },
+  description: 'Cửa hàng vật tư MAI KIM TUYẾN chuyên bán sỉ & lẻ Bột Kim Tuyến đủ size, Bột Camay, Bột Dạ Quang, Bột Phản Quang, Bột Màu, Băng Keo các loại, Sơn Xịt, Keo Dán và Xi Đánh Giày giá tận xưởng tphcm.',
+  keywords: [
+    'bột kim tuyến',
+    'bán sỉ bột kim tuyến',
+    'bột màu xây dựng',
+    'bột camay',
+    'bột dạ quang',
+    'bột phản quang',
+    'băng keo giá sỉ',
+    'keo dán dog x66',
+    'xi đánh giày thai kleen',
+    'vật tư chợ lớn',
+    'mai kim tuyến',
+  ],
+  authors: [{ name: 'Mai Kim Tuyến' }],
+  creator: 'MAI KIM TUYẾN',
+  openGraph: {
+    type: 'website',
+    locale: 'vi_VN',
+    url: '/',
+    title: 'MAI KIM TUYẾN - Chuyên Sỉ & Lẻ Vật Tư Bột Kim Tuyến, Bột Màu, Băng Keo',
+    description: 'Báo giá sỉ Bột Kim Tuyến, Bột Màu, Băng Keo & Vật tư chất lượng cao giá tận xưởng. Giao hàng toàn quốc.',
+    siteName: 'MAI KIM TUYẾN',
+    images: [
+      {
+        url: '/logo.jpg',
+        width: 600,
+        height: 600,
+        alt: 'Cửa hàng vật tư Mai Kim Tuyến',
+      },
+    ],
+  },
   icons: {
     icon: '/logo.jpg',
     shortcut: '/logo.jpg',
     apple: '/logo.jpg',
+  },
+  verification: {
+    google: 'PhfpsrDc5rztcOCylh3mTHB9Nxm_KenihHoxHavYnpU',
   },
 };
 
@@ -22,6 +60,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
+        <meta name="google-site-verification" content="PhfpsrDc5rztcOCylh3mTHB9Nxm_KenihHoxHavYnpU" />
         <link rel="icon" href="/logo.jpg" type="image/jpeg" />
         <link rel="shortcut icon" href="/logo.jpg" type="image/jpeg" />
         <link rel="apple-touch-icon" href="/logo.jpg" />

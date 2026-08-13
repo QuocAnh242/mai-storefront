@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
   TrendingUp,
   DollarSign,
@@ -40,47 +41,31 @@ export default function AdminDoanhThuPage() {
   const currentYearMonth = new Date().toISOString().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState<string>(currentYearMonth);
 
-  // Load manual revenues from localStorage
+  // Load manual revenues from Supabase
   useEffect(() => {
-    const saved = localStorage.getItem('mkt_manual_revenues');
-    if (saved) {
-      try {
-        setManualRevenues(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      // Default initial sample manual sales for demo
-      const initial: ManualRevenue[] = [
-        {
-          id: 'rev-1',
-          amount: 6400000,
-          date: new Date().toISOString().split('T')[0],
-          source: 'Bán sỉ tại xưởng (10 bao Vàng 313)',
-          note: 'Khách đại lý Anh Nam mua tại kho Trịnh Hoài Đức',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'rev-2',
-          amount: 3200000,
-          date: new Date().toISOString().split('T')[0],
-          source: 'Chuyển khoản trực tiếp Zalo',
-          note: 'Chị Hoa đặt 10kg Bột kim tuyến đỏ nhũ',
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      setManualRevenues(initial);
-      localStorage.setItem('mkt_manual_revenues', JSON.stringify(initial));
-    }
+    supabase
+      .from('manual_revenues')
+      .select('*')
+      .order('date', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to load manual revenues:', error);
+          return;
+        }
+        if (data) {
+          setManualRevenues(data.map((item: any) => ({
+            id: item.id,
+            amount: Number(item.amount),
+            date: item.date,
+            source: item.source,
+            note: item.note || '',
+            createdAt: item.created_at,
+          })));
+        }
+      });
   }, []);
 
-  // Save manual revenues to localStorage
-  const saveManualRevenues = (updated: ManualRevenue[]) => {
-    setManualRevenues(updated);
-    localStorage.setItem('mkt_manual_revenues', JSON.stringify(updated));
-  };
-
-  const handleAddManualRevenue = (e: React.FormEvent) => {
+  const handleAddManualRevenue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0 || !date) {
       alert('Vui lòng nhập số tiền hợp lệ và ngày ghi nhận!');
@@ -96,16 +81,35 @@ export default function AdminDoanhThuPage() {
       createdAt: new Date().toISOString(),
     };
 
-    saveManualRevenues([newRev, ...manualRevenues]);
+    // Save to Supabase
+    const { error } = await supabase.from('manual_revenues').insert([{
+      id: newRev.id,
+      amount: newRev.amount,
+      date: newRev.date,
+      source: newRev.source,
+      note: newRev.note,
+    }]);
+    if (error) {
+      alert('Lưu thất bại: ' + error.message);
+      return;
+    }
+
+    setManualRevenues((prev) => [newRev, ...prev]);
     setAmount(0);
     setNote('');
     setIsModalOpen(false);
   };
 
-  const handleDeleteManualRevenue = (id: string) => {
-    if (confirm('Xóa bản ghi doanh thu này?')) {
-      saveManualRevenues(manualRevenues.filter((r) => r.id !== id));
+  const handleDeleteManualRevenue = async (id: string) => {
+    if (!confirm('Xóa bản ghi doanh thu này?')) return;
+
+    const { error } = await supabase.from('manual_revenues').delete().eq('id', id);
+    if (error) {
+      alert('Xóa thất bại: ' + error.message);
+      return;
     }
+
+    setManualRevenues((prev) => prev.filter((r) => r.id !== id));
   };
 
   const formatVND = (num: number) => {
