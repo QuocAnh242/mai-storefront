@@ -107,12 +107,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           id: item.id,
           title: item.title,
           slug: item.slug,
+          category: item.category || 'Mẹo hay',
           thumbnail: item.thumbnail,
           summary: item.summary,
-          content: item.content,
-          author: item.author,
-          isPublished: item.is_published,
-          createdAt: item.created_at,
+          content: item.content || '',
+          sections: item.sections || [],
+          author: item.author || 'Chị Mai Kim Tuyến',
+          isPublished: item.is_published ?? true,
+          createdAt: item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         })));
       } else {
         setBlogs(INITIAL_BLOGS);
@@ -244,21 +246,103 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── Blog Actions ─────────────────────────────────────────────────────────────
-  const addBlogPost = (blog: Omit<BlogPost, 'id' | 'createdAt'>) => {
+  const addBlogPost = async (blog: Omit<BlogPost, 'id' | 'createdAt'>) => {
     const post: BlogPost = {
       ...blog,
       id: `blog-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
     setBlogs((prev) => [post, ...prev]);
+
+    if (isSupabaseConfigured()) {
+      const fullPayload = {
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        category: post.category || 'Mẹo hay',
+        thumbnail: post.thumbnail,
+        summary: post.summary,
+        content: post.content,
+        sections: post.sections || [],
+        author: post.author,
+        is_published: post.isPublished,
+      };
+
+      const { error: fullErr } = await supabase.from('blogs').insert([fullPayload]);
+
+      if (fullErr) {
+        console.warn('Supabase full blog insert error, trying legacy fallback:', fullErr.message);
+
+        // Fallback: Embed sections and category into content JSON string if DB table lacks new columns
+        const fallbackContent = JSON.stringify({
+          category: post.category || 'Mẹo hay',
+          sections: post.sections || [],
+          rawContent: post.content,
+        });
+
+        const legacyPayload = {
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          thumbnail: post.thumbnail,
+          summary: post.summary,
+          content: fallbackContent,
+          author: post.author,
+          is_published: post.isPublished,
+        };
+
+        const { error: legacyErr } = await supabase.from('blogs').insert([legacyPayload]);
+        if (legacyErr) {
+          console.error('Error inserting blog into Supabase fallback:', legacyErr.message);
+        }
+      }
+    }
   };
 
-  const updateBlogPost = (id: string, blog: Partial<BlogPost>) => {
+  const updateBlogPost = async (id: string, blog: Partial<BlogPost>) => {
     setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...blog } : b)));
+
+    if (isSupabaseConfigured()) {
+      const dbPayload: any = {};
+      if (blog.title !== undefined) dbPayload.title = blog.title;
+      if (blog.slug !== undefined) dbPayload.slug = blog.slug;
+      if (blog.category !== undefined) dbPayload.category = blog.category;
+      if (blog.thumbnail !== undefined) dbPayload.thumbnail = blog.thumbnail;
+      if (blog.summary !== undefined) dbPayload.summary = blog.summary;
+      if (blog.content !== undefined) dbPayload.content = blog.content;
+      if (blog.sections !== undefined) dbPayload.sections = blog.sections;
+      if (blog.author !== undefined) dbPayload.author = blog.author;
+      if (blog.isPublished !== undefined) dbPayload.is_published = blog.isPublished;
+
+      const { error: updateErr } = await supabase.from('blogs').update(dbPayload).eq('id', id);
+
+      if (updateErr) {
+        console.warn('Supabase blog update error, trying legacy fallback:', updateErr.message);
+        delete dbPayload.category;
+        delete dbPayload.sections;
+        if (blog.sections || blog.category) {
+          dbPayload.content = JSON.stringify({
+            category: blog.category || 'Mẹo hay',
+            sections: blog.sections || [],
+            rawContent: blog.content || '',
+          });
+        }
+        await supabase.from('blogs').update(dbPayload).eq('id', id);
+      }
+    }
   };
 
   const deleteBlogPost = (id: string) => {
     setBlogs((prev) => prev.filter((b) => b.id !== id));
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('blogs')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Error deleting blog from Supabase:', error);
+        });
+    }
   };
 
   // ── Order Actions ────────────────────────────────────────────────────────────

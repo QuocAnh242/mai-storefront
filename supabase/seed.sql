@@ -1,7 +1,10 @@
 -- SQL Seed Data for MAI KIM TUYẾN Store
 -- Copy & Run this script in Supabase SQL Editor (https://supabase.com/dashboard/project/gldbmrulhwavehuvxubo/sql/new)
 
--- 1. Enable Public Insert & Update Policies for Categories & Products
+-- 1. Enable Public Insert & Update & Delete Policies for Categories, Products & Blogs
+ALTER TABLE blogs ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Mẹo hay';
+ALTER TABLE blogs ADD COLUMN IF NOT EXISTS sections JSONB DEFAULT '[]'::jsonb;
+
 DROP POLICY IF EXISTS "Public Insert Categories" ON categories;
 CREATE POLICY "Public Insert Categories" ON categories FOR INSERT WITH CHECK (true);
 
@@ -16,6 +19,15 @@ CREATE POLICY "Public Update Products" ON products FOR UPDATE USING (true);
 
 DROP POLICY IF EXISTS "Public Delete Products" ON products;
 CREATE POLICY "Public Delete Products" ON products FOR DELETE USING (true);
+
+DROP POLICY IF EXISTS "Public Insert Blogs" ON blogs;
+CREATE POLICY "Public Insert Blogs" ON blogs FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Update Blogs" ON blogs;
+CREATE POLICY "Public Update Blogs" ON blogs FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public Delete Blogs" ON blogs;
+CREATE POLICY "Public Delete Blogs" ON blogs FOR DELETE USING (true);
 
 -- 2. Insert Initial Categories
 INSERT INTO categories (id, name, slug, description) VALUES

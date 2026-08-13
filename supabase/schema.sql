@@ -55,9 +55,11 @@ CREATE TABLE IF NOT EXISTS blogs (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
+  category TEXT DEFAULT 'Mẹo hay',
   thumbnail TEXT,
   summary TEXT,
   content TEXT,
+  sections JSONB DEFAULT '[]'::jsonb,
   author TEXT DEFAULT 'Chị Mai Kim Tuyến',
   is_published BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()

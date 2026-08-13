@@ -146,42 +146,4 @@ export const INITIAL_CATEGORIES: Category[] = [
 
 export const INITIAL_PRODUCTS: Product[] = [];
 
-export const INITIAL_BLOGS: BlogPost[] = [
-  {
-    id: 'blog-1',
-    title: 'Hướng Dẫn Chọn Bột Màu Phù Hợp Cho Công Trình Gạch Vỉa Hè & Chậu Cảnh',
-    slug: 'huong-dan-chon-bot-mau-phu-hop-cho-cong-trinh',
-    thumbnail: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80',
-    summary: 'Bài viết chia sẻ kinh nghiệm phối bột màu Ba Biển, Bột màu Vàng Oxide Sắt 313 và Bột màu Đỏ Y101 để đạt màu sắc tươi độ bền tối ưu.',
-    content: `
-### 1. Giới thiệu các loại bột màu xây dựng phổ biến
-Trong thi công chậu cảnh, gạch terrazzo, gạch vỉa hè và gạch bông, 3 dòng bột màu được ưa chuộng nhất là:
-- **Bột màu Ba Biển (Bao 5kg)**: Chuyên dùng cho chậu cảnh, phối màu bê tông nhỏ gọn, độ phủ mịn.
-- **Bột màu Vàng Oxide Sắt 313 (Loại 3 Đồng Tiền - Bao 25kg)**: Tạo tông màu vàng đất tự nhiên, siêu bền màu ngoài trời.
-- **Bột màu Đỏ Oxide Sắt Y101 (Hunan Three-Ring - Bao 25kg)**: Tạo tông đỏ rực rỡ, khả năng phân tán tuyệt vời trong xi măng.
-
-### 2. Mẹo tỷ lệ pha trộn xi măng
-Nên pha bột màu vào nước hoặc xi măng khô trước khi trộn cát đá để bột màu phân tán đều hoàn toàn, tránh hiện tượng đốm màu.
-    `,
-    author: 'Chị Mai Kim Tuyến',
-    isPublished: true,
-    createdAt: '2026-08-05'
-  },
-  {
-    id: 'blog-2',
-    title: 'Cách Tẩy Keo 502 & Keo Con Chó Dính Trên Quần Áo, Đồ Da Cực Nhanh',
-    slug: 'cach-tay-keo-502-va-keo-con-cho-tren-do-da',
-    thumbnail: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80',
-    summary: 'Chẳng may dán keo bị dính ra tay hoặc quần áo? Áp dụng ngay 2 mẹo đơn giản với dung dịch tẩy keo và dầu ăn.',
-    content: `
-### Cách 1: Tẩy keo 502 bằng dung dịch Xăng thơm hoặc Acetone
-Thấm một lượng nhỏ Acetone vào bông gòn rồi lau nhẹ lên vết keo 502 cứng. Keo sẽ rã ra dần dần trong 1-2 phút.
-
-### Cách 2: Tẩy keo con chó Dog X66 bằng Dầu ăn
-Keo con chó có gốc cao su. Khi dính lên tay hoặc mép giày, bôi ít dầu ăn và xoa nhẹ, keo sẽ kết vón lại và dễ dàng bóc sạch.
-    `,
-    author: 'Chị Mai Kim Tuyến',
-    isPublished: true,
-    createdAt: '2026-08-08'
-  }
-];
+export const INITIAL_BLOGS: BlogPost[] = [];

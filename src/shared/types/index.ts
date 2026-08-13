@@ -63,13 +63,49 @@ export interface Order {
   paidAt?: string;
 }
 
+export interface BlogBlock {
+  id: string;
+  type: 'paragraph' | 'heading' | 'image' | 'quote' | 'ad_banner';
+  content: string;
+  level?: 2 | 3;
+  caption?: string;
+  formatting?: {
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    listType?: 'none' | 'bullet' | 'number';
+    alignment?: 'left' | 'center' | 'right';
+  };
+  bannerImage?: string;
+  bannerTitle?: string;
+  bannerSubtitle?: string;
+  bannerLink?: string;
+  bannerCtaText?: string;
+}
+
+export interface BlogSection {
+  id: string;
+  sectionTitle?: string;
+  blocks: BlogBlock[];
+  hasAdAfter?: boolean;
+  adConfig?: {
+    bannerTitle?: string;
+    bannerSubtitle?: string;
+    bannerImage?: string;
+    bannerLink?: string;
+    bannerCtaText?: string;
+  };
+}
+
 export interface BlogPost {
   id: string;
   title: string;
   slug: string;
+  category?: string;
   thumbnail: string;
   summary: string;
   content: string;
+  sections?: BlogSection[];
   author: string;
   isPublished: boolean;
   createdAt: string;

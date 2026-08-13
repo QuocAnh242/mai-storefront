@@ -1,216 +1,131 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+import Link from 'next/link';
 import { useStore } from '@/shared/context/StoreContext';
-import { Newspaper, Plus, Trash2, Edit, Save, X } from 'lucide-react';
-import { BlogPost } from '@/shared/types';
+import { Newspaper, Plus, Trash2, Edit, Tag, Layers, ExternalLink } from 'lucide-react';
 
 export default function AdminTinTucPage() {
-  const { blogs, addBlogPost, updateBlogPost, deleteBlogPost } = useStore();
-  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const [title, setTitle] = useState('');
-  const [summary, setSummary] = useState('');
-  const [content, setContent] = useState('');
-  const [thumbnail, setThumbnail] = useState('');
-  const [author, setAuthor] = useState('Chị Mai Kim Tuyến');
-
-  const handleOpenForm = (post?: BlogPost) => {
-    if (post) {
-      setEditingPost(post);
-      setTitle(post.title);
-      setSummary(post.summary);
-      setContent(post.content);
-      setThumbnail(post.thumbnail);
-      setAuthor(post.author);
-    } else {
-      setEditingPost(null);
-      setTitle('');
-      setSummary('');
-      setContent('');
-      setThumbnail('');
-      setAuthor('Chị Mai Kim Tuyến');
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !content) return;
-
-    const payload = {
-      title,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      summary,
-      content,
-      thumbnail: thumbnail || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600',
-      author,
-      isPublished: true,
-    };
-
-    if (editingPost) {
-      updateBlogPost(editingPost.id, payload);
-    } else {
-      addBlogPost(payload);
-    }
-
-    setIsModalOpen(false);
-  };
+  const { blogs, deleteBlogPost } = useStore();
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+      {/* Top Banner */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-black text-slate-900 uppercase flex items-center gap-2">
             <Newspaper className="w-6 h-6 text-sky-700" />
             <span>Quản Lý Bài Viết & Tin Tức Shop</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Đăng các bài viết hướng dẫn mẹo hay sửa chữa đồ dùng, chọn size kim tuyến & tin tức cửa hàng.
+            Trình soạn thảo chuyên nghiệp theo Section (Phân đoạn 1, 2, 3...) hỗ trợ chèn quảng cáo và xem trước thời gian thực.
           </p>
         </div>
 
-        <button
-          onClick={() => handleOpenForm()}
-          className="bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+        <Link
+          href="/admin/tin-tuc/tao-bai-viet"
+          className="bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-colors flex items-center gap-2 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
-          <span>Đăng Bài Viết Mới</span>
-        </button>
+          <span>Tạo Bài Viết Mới</span>
+        </Link>
       </div>
 
-      {/* Blogs List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {blogs.map((post) => (
-          <div key={post.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden p-5 flex flex-col justify-between">
-            <div className="flex gap-4">
-              <img
-                src={post.thumbnail}
-                alt={post.title}
-                className="w-24 h-24 object-cover rounded-xl border border-slate-200 shrink-0"
-              />
-              <div>
-                <span className="text-[11px] font-semibold text-slate-400">Tác giả: {post.author}</span>
-                <h3 className="font-bold text-slate-900 text-sm line-clamp-2 mt-0.5">{post.title}</h3>
-                <p className="text-xs text-slate-500 line-clamp-2 mt-1">{post.summary}</p>
-              </div>
-            </div>
+      {/* Blogs Grid List */}
+      {blogs.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {blogs.map((post) => {
+            const sectionCount = post.sections?.length || 0;
+            return (
+              <div
+                key={post.id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all overflow-hidden p-5 flex flex-col justify-between"
+              >
+                <div className="flex gap-4">
+                  <img
+                    src={post.thumbnail}
+                    alt={post.title}
+                    className="w-24 h-24 object-cover rounded-xl border border-slate-200 shrink-0 bg-slate-100"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600';
+                    }}
+                  />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-100 flex items-center gap-1">
+                        <Tag className="w-2.5 h-2.5" />
+                        {post.category || 'Mẹo hay'}
+                      </span>
+                      {sectionCount > 0 && (
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1">
+                          <Layers className="w-2.5 h-2.5 text-slate-500" />
+                          {sectionCount} Sections
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm line-clamp-2 mt-0.5">{post.title}</h3>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{post.summary}</p>
+                  </div>
+                </div>
 
-            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Đăng ngày: {post.createdAt}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleOpenForm(post)}
-                  className="p-1.5 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-sky-50"
-                  title="Sửa bài viết"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Xóa bài viết này?')) deleteBlogPost(post.id);
-                  }}
-                  className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50"
-                  title="Xóa bài viết"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <div className="text-slate-400 text-[11px] flex items-center gap-2">
+                    <span>Tác giả: {post.author}</span>
+                    <span>•</span>
+                    <span>{post.createdAt}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/tin-tuc/${post.slug}`}
+                      target="_blank"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                      title="Xem bài viết trên storefront"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href={`/admin/tin-tuc/chinh-sua/${post.id}`}
+                      className="p-1.5 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-sky-50"
+                      title="Sửa bài viết (Section Editor)"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('Xóa bài viết này khỏi hệ thống?')) deleteBlogPost(post.id);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                      title="Xóa bài viết"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-sky-50 border border-sky-100 text-sky-700 flex items-center justify-center mx-auto">
+            <Newspaper className="w-8 h-8" />
           </div>
-        ))}
-      </div>
-
-      {/* Modal Form */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl animate-in zoom-in-95 my-8">
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
-              <h3 className="font-bold text-base">
-                {editingPost ? 'Chỉnh Sửa Bài Viết' : 'Tạo Bài Viết Mới'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Tiêu đề bài viết (*)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Hướng dẫn chọn size kim tuyến chuẩn cho in lụa..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 outline-none focus:border-sky-600 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Tóm tắt bài viết (*)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Mô tả ngắn hiển thị ở trang danh sách..."
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 outline-none focus:border-sky-600 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Đường dẫn ảnh Thumbnail</label>
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={thumbnail}
-                  onChange={(e) => setThumbnail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 outline-none focus:border-sky-600 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Tác giả</label>
-                <input
-                  type="text"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 outline-none focus:border-sky-600 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nội dung chi tiết (hỗ trợ xuống dòng)</label>
-                <textarea
-                  rows={6}
-                  required
-                  placeholder="Viết nội dung bài viết hướng dẫn chi tiết tại đây..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 outline-none focus:border-sky-600 focus:bg-white"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{editingPost ? 'Cập Nhật Bài Viết' : 'Đăng Bài Viết'}</span>
-                </button>
-              </div>
-            </form>
+          <div className="max-w-md mx-auto">
+            <h3 className="font-bold text-slate-900 text-base">Chưa có bài viết nào</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Dữ liệu tin tức đã được làm sạch. Bấm vào nút bên dưới để tạo bài viết chuyên nghiệp đầu tiên với các phân đoạn Section 1, 2, 3!
+            </p>
           </div>
+          <Link
+            href="/admin/tin-tuc/tao-bai-viet"
+            className="inline-flex items-center gap-2 bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tạo Bài Viết Mới Đầu Tiên</span>
+          </Link>
         </div>
       )}
     </div>
