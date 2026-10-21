@@ -1,11 +1,64 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
 import { ProductCard } from '../products/ProductCard';
 
 export function FeaturedProductsSection() {
   const { products, featuredProducts, selectedCategory, setSelectedCategory, searchQuery, categories } = useStore();
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasMovedRef = useRef(false);
+
+  // Convert vertical mouse wheel to horizontal scroll when hovering over the category bar
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Mouse drag-to-scroll handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || !scrollContainerRef.current) return;
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = x - startXRef.current;
+    if (Math.abs(walk) > 4) {
+      hasMovedRef.current = true;
+    }
+    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleCategoryClick = (catId: string | null) => {
+    if (hasMovedRef.current) {
+      hasMovedRef.current = false;
+      return; // If user was dragging, don't trigger button click!
+    }
+    setSelectedCategory(catId);
+  };
 
   // Active filter logic
   const filteredProducts = products.filter((p) => {
@@ -42,19 +95,28 @@ export function FeaturedProductsSection() {
 
   return (
     <div id="danh-sach-san-pham" className="space-y-12 py-4">
-      {/* Clean Category Filter Bar with Scroll Affordance */}
-      <div className="relative bg-white p-2.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto scrollbar-none py-0.5 pr-8 sm:pr-0 scroll-smooth">
-          <span className="hidden sm:inline font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wide shrink-0">
+      {/* Clean Category Filter Bar with Drag & Wheel Scroll Affordance */}
+      <div
+        className="relative bg-white p-2.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs group"
+        onMouseLeave={handleMouseUpOrLeave}
+      >
+        <div
+          ref={scrollContainerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUpOrLeave}
+          className="flex items-center gap-2 sm:gap-3 overflow-x-auto scrollbar-none py-1 pr-8 sm:pr-4 scroll-smooth cursor-grab active:cursor-grabbing select-none"
+        >
+          <span className="hidden sm:inline font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wide shrink-0 pointer-events-none">
             Danh Mục:
           </span>
 
           <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+            onClick={() => handleCategoryClick(null)}
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 select-none ${
               selectedCategory === null
                 ? 'bg-sky-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95'
             }`}
           >
             Tất cả sản phẩm
@@ -62,11 +124,11 @@ export function FeaturedProductsSection() {
           {categories.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+              onClick={() => handleCategoryClick(cat.id)}
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 select-none ${
                 selectedCategory === cat.id
                   ? 'bg-sky-950 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95'
               }`}
             >
               {cat.name}
@@ -74,10 +136,8 @@ export function FeaturedProductsSection() {
           ))}
         </div>
 
-        {/* Right Fade Edge for mobile scroll affordance */}
-        <div className="pointer-events-none absolute right-1 top-1 bottom-1 w-8 sm:w-10 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-xl flex items-center justify-end pr-1 sm:hidden">
-          <span className="text-[10px] text-slate-400 font-bold">›</span>
-        </div>
+        {/* Right Fade Edge for scroll affordance */}
+        <div className="pointer-events-none absolute right-1.5 top-1.5 bottom-1.5 w-8 sm:w-12 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-xl" />
       </div>
 
       {/* FILTER SEARCH OR CATEGORY MODE */}

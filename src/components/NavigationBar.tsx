@@ -39,7 +39,7 @@ export function NavigationBar() {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between">
         
         {/* Left Section: All Categories Menu + Main Category Tabs */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0">
 
           {/* 1. "DANH MỤC SẢN PHẨM" Mega Dropdown Button */}
           <div ref={dropdownRef} className="relative z-50">
