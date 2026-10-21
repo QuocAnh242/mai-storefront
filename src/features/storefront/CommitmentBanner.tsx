@@ -41,10 +41,10 @@ export function CommitmentBanner() {
             </p>
           </div>
           <div className="bg-white rounded-2xl p-5 border border-sky-100 shadow-xs">
-            <span className="text-3xl font-black text-sky-500">QR</span>
-            <h4 className="font-bold text-sm text-slate-700 mt-2">Thanh toán tự động</h4>
+            <span className="text-3xl font-black text-sky-500">24/7</span>
+            <h4 className="font-bold text-sm text-slate-700 mt-2">Tư vấn tận tình</h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              VietQR / PayOS xác nhận đơn tức thì 24/7
+              Hỗ trợ qua Zalo, Messenger mọi lúc mọi nơi
             </p>
           </div>
         </div>

@@ -13,8 +13,10 @@ export default function StorefrontLayout({
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-800">
       <TopBar />
-      <Header />
-      <NavigationBar />
+      <div className="sticky top-0 z-40 shadow-xs">
+        <Header />
+        <NavigationBar />
+      </div>
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 pt-2 pb-6">
         {children}
       </main>

@@ -35,7 +35,7 @@ export function NavigationBar() {
   };
 
   return (
-    <nav className="bg-sky-900 sticky top-[69px] z-30 shadow-md">
+    <nav className="bg-sky-900 shadow-md">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between">
         
         {/* Left Section: All Categories Menu + Main Category Tabs */}

@@ -42,16 +42,16 @@ export function FeaturedProductsSection() {
 
   return (
     <div id="danh-sach-san-pham" className="space-y-12 py-4">
-      {/* Clean Category Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-4 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="font-extrabold text-slate-900 text-sm uppercase tracking-wide">Danh Mục:</span>
-        </div>
+      {/* Clean Category Filter Bar with Scroll Affordance */}
+      <div className="relative bg-white p-2.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto scrollbar-none py-0.5 pr-8 sm:pr-0 scroll-smooth">
+          <span className="hidden sm:inline font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wide shrink-0">
+            Danh Mục:
+          </span>
 
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
               selectedCategory === null
                 ? 'bg-sky-950 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -63,7 +63,7 @@ export function FeaturedProductsSection() {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
                 selectedCategory === cat.id
                   ? 'bg-sky-950 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -72,6 +72,11 @@ export function FeaturedProductsSection() {
               {cat.name}
             </button>
           ))}
+        </div>
+
+        {/* Right Fade Edge for mobile scroll affordance */}
+        <div className="pointer-events-none absolute right-1 top-1 bottom-1 w-8 sm:w-10 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-xl flex items-center justify-end pr-1 sm:hidden">
+          <span className="text-[10px] text-slate-400 font-bold">›</span>
         </div>
       </div>
 
@@ -96,7 +101,7 @@ export function FeaturedProductsSection() {
           </div>
 
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -123,7 +128,7 @@ export function FeaturedProductsSection() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
                 {featuredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -148,7 +153,7 @@ export function FeaturedProductsSection() {
             </div>
 
             {powderProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
                 {powderProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -177,7 +182,7 @@ export function FeaturedProductsSection() {
             </div>
 
             {adhesiveProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
                 {adhesiveProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -206,7 +211,7 @@ export function FeaturedProductsSection() {
             </div>
 
             {shoePolishProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
                 {shoePolishProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -235,7 +240,7 @@ export function FeaturedProductsSection() {
             </div>
 
             {otherProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
                 {otherProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
