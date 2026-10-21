@@ -57,16 +57,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (isSupabaseConfigured()) {
     try {
       const [{ data: products }, { data: blogs }] = await Promise.all([
-        supabase.from('products').select('id, slug, updated_at, created_at'),
-        supabase.from('blogs').select('id, slug, updated_at, created_at'),
+        supabase.from('products').select('id, slug, created_at'),
+        supabase.from('blogs').select('id, slug, created_at'),
       ]);
 
       if (products && products.length > 0) {
         productRoutes = products.map((prod) => ({
           url: `${baseUrl}/san-pham/${prod.slug || prod.id}`,
-          lastModified: prod.updated_at
-            ? new Date(prod.updated_at)
-            : new Date(prod.created_at || Date.now()),
+          lastModified: prod.created_at ? new Date(prod.created_at) : new Date(),
           changeFrequency: 'weekly' as const,
           priority: 0.85,
         }));
@@ -75,9 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (blogs && blogs.length > 0) {
         blogRoutes = blogs.map((blog) => ({
           url: `${baseUrl}/tin-tuc/${blog.slug || blog.id}`,
-          lastModified: blog.updated_at
-            ? new Date(blog.updated_at)
-            : new Date(blog.created_at || Date.now()),
+          lastModified: blog.created_at ? new Date(blog.created_at) : new Date(),
           changeFrequency: 'weekly' as const,
           priority: 0.75,
         }));
