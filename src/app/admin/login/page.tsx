@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/shared/context/ToastContext';
+import { supabase } from '@/lib/supabase';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      // 1. Authenticate with Server (Rate limit check & HttpOnly Cookies)
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,6 +36,18 @@ export default function AdminLoginPage() {
         showToast(msg, 'error');
         setLoading(false);
         return;
+      }
+
+      // 2. Establish Client-Side Supabase Session for RLS queries
+      if (data.session) {
+        try {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        } catch (clientErr) {
+          console.warn('Client auth sync notice:', clientErr);
+        }
       }
 
       // Successful JWT Login

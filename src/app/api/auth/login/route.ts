@@ -59,10 +59,14 @@ export async function POST(req: Request) {
 
     const { access_token, refresh_token, expires_in } = data.session;
 
-    // 4. Create Response with HttpOnly JWT Cookies
+    // 4. Create Response with HttpOnly JWT Cookies and Session Payload
     const response = NextResponse.json({
       success: true,
       message: 'Đăng nhập thành công',
+      session: {
+        access_token,
+        refresh_token,
+      },
       user: {
         id: data.user.id,
         email: data.user.email,

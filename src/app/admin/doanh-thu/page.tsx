@@ -43,26 +43,46 @@ export default function AdminDoanhThuPage() {
 
   // Load manual revenues from Supabase
   useEffect(() => {
-    supabase
-      .from('manual_revenues')
-      .select('*')
-      .order('date', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('Failed to load manual revenues:', error);
-          return;
+    const loadRevenues = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const res = await fetch('/api/auth/session');
+          if (res.ok) {
+            const authData = await res.json();
+            if (authData?.session?.access_token) {
+              await supabase.auth.setSession(authData.session);
+            }
+          }
         }
-        if (data) {
-          setManualRevenues(data.map((item: any) => ({
+      } catch (err) {
+        console.warn('Session sync notice:', err);
+      }
+
+      const { data, error } = await supabase
+        .from('manual_revenues')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Failed to load manual revenues:', error);
+        return;
+      }
+      if (data) {
+        setManualRevenues(
+          data.map((item: any) => ({
             id: item.id,
             amount: Number(item.amount),
             date: item.date,
             source: item.source,
             note: item.note || '',
             createdAt: item.created_at,
-          })));
-        }
-      });
+          }))
+        );
+      }
+    };
+
+    loadRevenues();
   }, []);
 
   const handleAddManualRevenue = async (e: React.FormEvent) => {

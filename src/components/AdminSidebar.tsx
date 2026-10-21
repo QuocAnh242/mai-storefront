@@ -15,10 +15,15 @@ import {
   X,
   Sparkles,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const [isOpenMobile, setIsOpenMobile] = useState(false);
+
+  if (pathname === '/admin/login') {
+    return null;
+  }
 
   const navItems = [
     { href: '/admin/san-pham', label: 'Quản Lý Sản Phẩm', icon: Package },
@@ -86,8 +91,12 @@ export function AdminSidebar() {
 
         <button
           onClick={async () => {
-            await fetch('/api/auth/logout', { method: 'POST' });
-            window.location.href = '/';
+            try {
+              await supabase.auth.signOut();
+              await fetch('/api/auth/logout', { method: 'POST' });
+            } finally {
+              window.location.href = '/admin/login';
+            }
           }}
           className="w-full flex items-center gap-2 text-xs font-bold text-red-300 hover:text-red-100 hover:bg-red-900/40 px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
         >

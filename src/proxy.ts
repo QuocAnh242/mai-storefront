@@ -44,6 +44,19 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // 3. Protect Admin Upload API (/api/upload)
+  if (pathname.startsWith('/api/upload')) {
+    const accessToken = request.cookies.get('sb-access-token')?.value;
+    const adminSession = request.cookies.get('mkt_admin_logged_in')?.value;
+
+    if (!accessToken && adminSession !== 'true') {
+      return NextResponse.json(
+        { error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên (Admin) để tải ảnh' },
+        { status: 401 }
+      );
+    }
+  }
+
   return response;
 }
 
