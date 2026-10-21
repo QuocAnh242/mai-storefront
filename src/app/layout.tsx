@@ -4,14 +4,15 @@ import { StoreProvider } from "@/shared/context/StoreContext";
 import { ToastProvider } from "@/shared/context/ToastContext";
 import { CartProvider } from "@/shared/context/CartContext";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.maikimtuyen.io.vn";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.maikimtuyen.io.vn";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
     default:
-      "MAI KIM TUYẾN - Tổng Kho Sỉ Băng Keo, Bột Kim Tuyến, Bột Màu, Bột Nhũ Giá Xưởng TPHCM",
-    template: "%s | MAI KIM TUYẾN - Băng Keo, Kim Tuyến, Bột Màu, Bột Nhũ",
+      "Shop Kim Tuyến - Cửa Hàng Bột Kim Tuyến, Bột Màu, Băng Keo Sỉ Lẻ | MAI KIM TUYẾN",
+    template: "%s | Shop Kim Tuyến MAI KIM TUYẾN",
   },
   description:
     "Xưởng & Tổng kho phân phối MAI KIM TUYẾN tại Chợ Lớn TP.HCM - Chuyên bán buôn sỉ & lẻ Băng Keo các loại, Bột Kim Tuyến đủ size hạt, Bột Màu xây dựng & công nghiệp, Bột Nhũ Camay ánh kim, Bột Dạ Quang, Phản Quang, Sơn Xịt, Keo Dán giá tận gốc. Giao hàng toàn quốc.",
