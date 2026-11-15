@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -13,6 +14,7 @@ export interface ToastItem {
 
 interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;
+  setPendingToast: (message: string, type?: ToastType) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -72,18 +74,45 @@ function ToastItemComponent({ toast, onRemove }: { toast: ToastItem; onRemove: (
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const pathname = usePathname();
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     setToasts((prev) => [...prev, { id, message, type }]);
   }, []);
 
+  const setPendingToast = useCallback((message: string, type: ToastType = 'success') => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('pending_toast', JSON.stringify({ message, type }));
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const pending = sessionStorage.getItem('pending_toast');
+      if (pending) {
+        sessionStorage.removeItem('pending_toast');
+        const parsed = JSON.parse(pending);
+        if (parsed?.message) {
+          showToast(parsed.message, parsed.type || 'success');
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [pathname, showToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast, setPendingToast }}>
       {children}
 
       {/* Floating Toast Container (Top Right with Overflow Hidden for Smooth Right Slide) */}

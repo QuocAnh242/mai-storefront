@@ -4,6 +4,8 @@ import { Header } from '@/components/Header';
 import { NavigationBar } from '@/components/NavigationBar';
 import { Footer } from '@/components/Footer';
 import { FloatingChatWidget } from '@/components/FloatingChatWidget';
+import { ScrollToTop } from '@/components/ScrollToTop';
+import { AnalyticsTracker } from '@/components/AnalyticsTracker';
 
 export default function StorefrontLayout({
   children,
@@ -12,6 +14,7 @@ export default function StorefrontLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-800">
+      <AnalyticsTracker />
       <TopBar />
       <div className="sticky top-0 z-40 shadow-xs">
         <Header />
@@ -22,6 +25,7 @@ export default function StorefrontLayout({
       </main>
       <Footer />
       <FloatingChatWidget />
+      <ScrollToTop />
     </div>
   );
 }

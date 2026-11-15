@@ -132,7 +132,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{product.title}</h4>
                 <p className="text-xs text-slate-500 mt-0.5">Quy cách: {product.unit}</p>
                 <div className="text-sky-700 font-extrabold text-sm mt-1">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                  {product.isContactPrice || product.price <= 1
+                    ? 'Liên hệ báo giá'
+                    : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
                 </div>
               </div>
               {/* Quantity Picker */}
@@ -196,7 +198,7 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Ghi chú cho xưởng</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Ghi chú đơn hàng</label>
                 <input
                   type="text"
                   placeholder="Ví dụ: Cần đóng gói 5 hũ loại hạt vừa..."

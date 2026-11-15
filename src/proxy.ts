@@ -15,11 +15,10 @@ export async function proxy(request: NextRequest) {
   // 2. Protect Admin Routes (/admin/* except /admin/login)
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     const accessToken = request.cookies.get('sb-access-token')?.value;
-    const adminSession = request.cookies.get('mkt_admin_logged_in')?.value;
 
     let isAuthenticated = false;
 
-    // Check Supabase JWT Access Token if present
+    // Verify Supabase JWT Access Token
     if (accessToken && isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase.auth.getUser(accessToken);
@@ -31,11 +30,6 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Fallback: Check HttpOnly adminSession cookie
-    if (!isAuthenticated && adminSession === 'true') {
-      isAuthenticated = true;
-    }
-
     // If unauthenticated, redirect to /admin/login
     if (!isAuthenticated) {
       const loginUrl = new URL('/admin/login', request.url);
@@ -44,12 +38,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 3. Protect Admin Upload API (/api/upload)
+  // 3. Protect Admin Upload API (/api/upload) — full auth check is in route.ts
   if (pathname.startsWith('/api/upload')) {
     const accessToken = request.cookies.get('sb-access-token')?.value;
-    const adminSession = request.cookies.get('mkt_admin_logged_in')?.value;
-
-    if (!accessToken && adminSession !== 'true') {
+    if (!accessToken) {
       return NextResponse.json(
         { error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên (Admin) để tải ảnh' },
         { status: 401 }
@@ -62,6 +54,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|logo.jpg).*)',
+    '/((?!_next/static|_next/image|favicon.ico|logo.jpg|logo2.jpeg).*)',
   ],
 };

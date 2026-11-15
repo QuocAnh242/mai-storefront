@@ -20,6 +20,7 @@ export interface Product {
   slug: string;
   price: number;
   originalPrice?: number;
+  isContactPrice?: boolean; // Tùy chọn giá liên hệ báo giá thay vì số tiền cụ thể
   unit: string; // e.g., "hũ 100g", "kg", "cuộn", "chai"
   description: string;
   categoryId: string;
@@ -111,10 +112,18 @@ export interface BlogPost {
   createdAt: string;
 }
 
+export interface StoreHotline {
+  number: string;
+  display: string;
+  label: string;
+  isZalo?: boolean;
+}
+
 export interface StoreSettings {
   storeName: string;
   hotline: string;
   zaloPhone: string;
+  hotlines?: StoreHotline[];
   email: string;
   facebookUrl: string;
   address: string;

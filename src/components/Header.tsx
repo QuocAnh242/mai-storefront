@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Search, Phone, User } from 'lucide-react';
 import { useStore } from '@/shared/context/StoreContext';
 import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
-import { AdminLoginModal } from './AdminLoginModal';
+import { AdminLoginModal } from '@/features/admin/AdminLoginModal';
 
 export function Header() {
   const { searchQuery, setSearchQuery, setSelectedCategory } = useStore();
@@ -31,7 +31,7 @@ export function Header() {
               className="flex items-center gap-2.5 group"
             >
               <img
-                src="/logo.jpg"
+                src="/logo2.jpeg"
                 alt="Mai Kim Tuyến Shop"
                 className="h-11 w-11 rounded-full object-cover border-2 border-sky-100 shadow-xs"
               />
@@ -84,7 +84,7 @@ export function Header() {
             className="shrink-0 flex items-center gap-3.5 group"
           >
             <img
-              src="/logo.jpg"
+              src="/logo2.jpeg"
               alt="Mai Kim Tuyến Shop"
               className="h-12 w-12 rounded-full object-cover border-2 border-sky-100 shadow-xs"
             />

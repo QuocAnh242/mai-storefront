@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getProductUrl } from '@/lib/productUrl';
 
 export const revalidate = 3600; // revalidate dynamic sitemap every hour
 
@@ -14,19 +15,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/san-pham`,
+      url: `${baseUrl}/products`,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/tin-tuc`,
+      url: `${baseUrl}/news`,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/lien-he`,
+      url: `${baseUrl}/contact`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
@@ -57,13 +58,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (isSupabaseConfigured()) {
     try {
       const [{ data: products }, { data: blogs }] = await Promise.all([
-        supabase.from('products').select('id, slug, created_at'),
+        supabase.from('products').select('id, slug, category_id, created_at'),
         supabase.from('blogs').select('id, slug, created_at'),
       ]);
 
       if (products && products.length > 0) {
         productRoutes = products.map((prod) => ({
-          url: `${baseUrl}/san-pham/${prod.slug || prod.id}`,
+          url: `${baseUrl}${getProductUrl({ id: prod.id, slug: prod.slug, categoryId: prod.category_id })}`,
           lastModified: prod.created_at ? new Date(prod.created_at) : new Date(),
           changeFrequency: 'weekly' as const,
           priority: 0.85,
@@ -72,7 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       if (blogs && blogs.length > 0) {
         blogRoutes = blogs.map((blog) => ({
-          url: `${baseUrl}/tin-tuc/${blog.slug || blog.id}`,
+          url: `${baseUrl}/news/${blog.slug || blog.id}`,
           lastModified: blog.created_at ? new Date(blog.created_at) : new Date(),
           changeFrequency: 'weekly' as const,
           priority: 0.75,

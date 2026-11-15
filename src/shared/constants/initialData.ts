@@ -2,8 +2,13 @@ import { Category, Product, BlogPost, StoreSettings } from '../types';
 
 export const INITIAL_STORE_SETTINGS: StoreSettings = {
   storeName: 'MAI KIM TUYẾN',
-  hotline: '0908 998 098',
+  hotline: '0704 479 791',
   zaloPhone: '0908998098',
+  hotlines: [
+    { number: '0704479791', display: '0704 479 791', label: 'Ms Mai' },
+    { number: '0908998098', display: '0908 998 098', label: 'Mrs Quoc' },
+    { number: '0798584841', display: '0798 584 841', label: 'Ms Linh' },
+  ],
   email: 'chuyencungcapkimtuyensivale@gmail.com',
   facebookUrl: 'https://www.facebook.com/chuyencungcapkimtuyensivale',
   address: '44 Trịnh Hoài Đức, Phường Chợ Lớn, TP. Hồ Chí Minh',

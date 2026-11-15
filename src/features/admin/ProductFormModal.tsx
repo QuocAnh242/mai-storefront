@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Product } from '@/shared/types';
 import { useStore } from '@/shared/context/StoreContext';
+import { slugify } from '@/lib/slugify';
 import { X, Save, Upload } from 'lucide-react';
 
 interface ProductFormModalProps {
@@ -17,6 +18,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState<number>(0);
   const [originalPrice, setOriginalPrice] = useState<number | undefined>(undefined);
+  const [isContactPrice, setIsContactPrice] = useState(false);
   const [unit, setUnit] = useState('Kg');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
@@ -48,7 +50,9 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
   useEffect(() => {
     if (editingProduct) {
       setTitle(editingProduct.title);
-      setPrice(editingProduct.price);
+      const contactPrice = Boolean(editingProduct.isContactPrice || editingProduct.price <= 1);
+      setIsContactPrice(contactPrice);
+      setPrice(contactPrice ? 0 : editingProduct.price);
       setOriginalPrice(editingProduct.originalPrice);
       setUnit(editingProduct.unit);
       setDescription(editingProduct.description);
@@ -117,8 +121,13 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || price <= 0 || !categoryId) {
-      alert('Vui lòng nhập Tên sản phẩm, Giá bán và Chọn danh mục!');
+    if (!title.trim() || !categoryId) {
+      alert('Vui lòng nhập Tên sản phẩm và Chọn danh mục!');
+      return;
+    }
+
+    if (!isContactPrice && (price === undefined || price <= 0)) {
+      alert('Vui lòng nhập Giá bán hợp lệ hoặc tích chọn "Giá Liên Hệ"!');
       return;
     }
 
@@ -132,9 +141,10 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
 
     const productPayload = {
       title,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-      price: Number(price),
-      originalPrice: originalPrice ? Number(originalPrice) : undefined,
+      slug: slugify(title),
+      price: isContactPrice ? 0 : Number(price),
+      originalPrice: isContactPrice ? undefined : (originalPrice ? Number(originalPrice) : undefined),
+      isContactPrice,
       unit,
       description,
       categoryId,
@@ -196,17 +206,43 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
           {/* 2. Giá bán, giá niêm yết, quy cách */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
-                Giá bán (VNĐ) (*)
-              </label>
-              <input
-                type="number"
-                required
-                placeholder="640000"
-                value={price || ''}
-                onChange={(e) => setPrice(Number(e.target.value))}
-                className="w-full bg-slate-50 border border-slate-300 text-sky-950 font-black text-sm rounded-xl p-3 outline-none focus:border-sky-600 focus:bg-white"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Giá bán (VNĐ) {!isContactPrice && '(*)'}
+                </label>
+                <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-sky-700 cursor-pointer select-none bg-sky-50 px-2 py-0.5 rounded border border-sky-200 hover:bg-sky-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={isContactPrice}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsContactPrice(checked);
+                      if (checked) {
+                        setPrice(0);
+                        setOriginalPrice(undefined);
+                      }
+                    }}
+                    className="w-3.5 h-3.5 text-sky-600 rounded cursor-pointer"
+                  />
+                  <span>Giá Liên Hệ</span>
+                </label>
+              </div>
+
+              {isContactPrice ? (
+                <div className="w-full bg-sky-50 border border-sky-200 text-sky-900 font-bold text-xs rounded-xl p-3 flex items-center justify-between">
+                  <span>Liên hệ báo giá</span>
+                  <span className="text-[10px] text-sky-600 font-normal">(Tự động hiển thị Liên hệ)</span>
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  required={!isContactPrice}
+                  placeholder="Ví dụ: 640000"
+                  value={price || ''}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-300 text-sky-950 font-black text-sm rounded-xl p-3 outline-none focus:border-sky-600 focus:bg-white"
+                />
+              )}
             </div>
 
             <div>
@@ -215,10 +251,15 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
               </label>
               <input
                 type="number"
-                placeholder="720000"
-                value={originalPrice || ''}
+                disabled={isContactPrice}
+                placeholder={isContactPrice ? 'Không áp dụng' : '720000'}
+                value={isContactPrice ? '' : (originalPrice || '')}
                 onChange={(e) => setOriginalPrice(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full bg-slate-50 border border-slate-300 text-slate-600 text-sm rounded-xl p-3 outline-none focus:border-sky-600 focus:bg-white"
+                className={`w-full border text-sm rounded-xl p-3 outline-none ${
+                  isContactPrice
+                    ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-50 border border-slate-300 text-slate-600 focus:border-sky-600 focus:bg-white'
+                }`}
               />
             </div>
 

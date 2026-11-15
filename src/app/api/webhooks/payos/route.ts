@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 /**
  * Verify HMAC SHA256 signature from PayOS webhook payload
@@ -20,21 +21,37 @@ function verifyPayOSSignature(data: Record<string, any>, signature: string, chec
   return computedSignature === signature;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // 0. IP Rate Limiting: Max 60 requests per minute
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+    const rateLimit = checkRateLimit(`payos_webhook_${clientIp}`, 60, 60);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'RATE_LIMIT_EXCEEDED', message: 'Quá nhiều yêu cầu webhook' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
-    console.log('PayOS Webhook received payload:', body);
 
     const { code, data, signature } = body;
     const checksumKey = process.env.PAYOS_CHECKSUM_KEY;
 
-    // 1. Verify HMAC Signature if checksumKey is configured
-    if (checksumKey && signature) {
-      const isValid = verifyPayOSSignature(data || {}, signature, checksumKey);
-      if (!isValid) {
-        console.warn('Unauthorized PayOS Webhook attempt: Invalid HMAC Signature!');
-        return NextResponse.json({ error: 'UNAUTHORIZED_SIGNATURE_MISMATCH' }, { status: 401 });
-      }
+    // 1. Verify HMAC Signature — REQUIRED, reject if key not configured or signature missing
+    if (!checksumKey) {
+      console.error('PAYOS_CHECKSUM_KEY not configured — webhook rejected for security.');
+      return NextResponse.json({ error: 'SERVER_MISCONFIGURED' }, { status: 500 });
+    }
+    if (!signature) {
+      console.warn('PayOS Webhook missing signature — rejected.');
+      return NextResponse.json({ error: 'MISSING_SIGNATURE' }, { status: 401 });
+    }
+    const isValid = verifyPayOSSignature(data || {}, signature, checksumKey);
+    if (!isValid) {
+      console.warn('Unauthorized PayOS Webhook attempt: Invalid HMAC Signature!');
+      return NextResponse.json({ error: 'UNAUTHORIZED_SIGNATURE_MISMATCH' }, { status: 401 });
     }
 
     // 2. Check code === "00" (PayOS success response)
@@ -54,20 +71,14 @@ export async function POST(req: Request) {
           .eq('order_code', orderCode);
 
         if (error) {
-          console.error('Error updating order status in Supabase:', error);
-          return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+          console.error('Failed to update order payment status in Supabase:', error);
         }
       }
-
-      return NextResponse.json({
-        success: true,
-        message: `Order ${orderCode} marked as PAID successfully!`,
-      });
     }
 
-    return NextResponse.json({ success: true, message: 'Webhook received' });
-  } catch (error) {
-    console.error('PayOS Webhook Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: true, message: 'Webhook processed' });
+  } catch (error: any) {
+    console.error('PayOS Webhook error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

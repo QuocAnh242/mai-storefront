@@ -15,14 +15,14 @@ export const metadata: Metadata = {
     template: "%s | Shop Kim Tuyến MAI KIM TUYẾN",
   },
   description:
-    "Xưởng & Tổng kho phân phối MAI KIM TUYẾN tại Chợ Lớn TP.HCM - Chuyên bán buôn sỉ & lẻ Băng Keo các loại, Bột Kim Tuyến đủ size hạt, Bột Màu xây dựng & công nghiệp, Bột Nhũ Camay ánh kim, Bột Dạ Quang, Phản Quang, Sơn Xịt, Keo Dán giá tận gốc. Giao hàng toàn quốc.",
+    "Cửa hàng & Tổng kho phân phối sỉ lẻ MAI KIM TUYẾN tại Chợ Lớn TP.HCM - Chuyên bán buôn sỉ & lẻ Băng Keo các loại, Bột Kim Tuyến đủ size hạt, Bột Màu xây dựng & công nghiệp, Bột Nhũ Camay ánh kim, Bột Dạ Quang, Phản Quang, Sơn Xịt, Keo Dán giá tốt nhất. Giao hàng toàn quốc.",
   keywords: [
     // Băng Keo
     "băng keo",
     "băng keo giá sỉ",
     "cửa hàng băng keo",
     "shop băng keo",
-    "xưởng sản xuất băng keo",
+    "nhà phân phối băng keo",
     "băng keo đục",
     "băng keo trong",
     "băng keo đóng thùng",
@@ -95,7 +95,7 @@ export const metadata: Metadata = {
     siteName: "MAI KIM TUYẾN",
     images: [
       {
-        url: "/logo.jpg",
+        url: "/logo2.jpeg",
         width: 600,
         height: 600,
         alt: "Cửa hàng MAI KIM TUYẾN - Băng Keo, Kim Tuyến, Bột Màu, Bột Nhũ Giá Sỉ Chợ Lớn",
@@ -107,13 +107,13 @@ export const metadata: Metadata = {
     title:
       "MAI KIM TUYẾN - Sỉ Băng Keo, Bột Kim Tuyến, Bột Màu, Bột Nhũ Camay TPHCM",
     description:
-      "Chuyên sỉ & lẻ Băng Keo đóng gói, Bột Kim Tuyến, Bột Màu xây dựng, Bột Nhũ Camay giá xưởng tại Chợ Lớn TP.HCM.",
-    images: ["/logo.jpg"],
+      "Chuyên sỉ & lẻ Băng Keo đóng gói, Bột Kim Tuyến, Bột Màu xây dựng, Bột Nhũ Camay giá sỉ tốt nhất tại Chợ Lớn TP.HCM.",
+    images: ["/logo2.jpeg"],
   },
   icons: {
-    icon: "/logo.jpg",
-    shortcut: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: "/logo2.jpeg",
+    shortcut: "/logo2.jpeg",
+    apple: "/logo2.jpeg",
   },
   verification: {
     google: "sX6OMUfsVbEpTeWjjvd2qdmCtwGsfNNF0SlxoeyX1ek",
@@ -149,11 +149,11 @@ const structuredData = {
         "Mai Store",
       ],
       description:
-        "Tổng kho xưởng phân phối chuyên cung cấp sỉ & lẻ Băng Keo các loại, Bột Kim Tuyến đủ size hạt, Bột Màu xây dựng & công nghiệp, Bột Nhũ Camay ánh kim, Bột Dạ Quang, Phản Quang, Sơn Xịt, Keo Dán giá tận xưởng tại Chợ Lớn TP.HCM. Giao hàng toàn quốc.",
+        "Tổng kho phân phối chuyên cung cấp sỉ & lẻ Băng Keo các loại, Bột Kim Tuyến đủ size hạt, Bột Màu xây dựng & công nghiệp, Bột Nhũ Camay ánh kim, Bột Dạ Quang, Phản Quang, Sơn Xịt, Keo Dán giá sỉ trực tiếp tại Chợ Lớn TP.HCM. Giao hàng toàn quốc.",
       url: siteUrl,
-      logo: `${siteUrl}/logo.jpg`,
-      image: `${siteUrl}/logo.jpg`,
-      telephone: "+84908998098",
+      logo: `${siteUrl}/logo2.jpeg`,
+      image: `${siteUrl}/logo2.jpeg`,
+      telephone: ["+84704479791", "+84908998098", "+84798584841"],
       email: "chuyencungcapkimtuyensivale@gmail.com",
       priceRange: "₫₫",
       currenciesAccepted: "VND",
@@ -224,7 +224,7 @@ const structuredData = {
       },
       potentialAction: {
         "@type": "SearchAction",
-        target: `${siteUrl}/san-pham?q={search_term_string}`,
+        target: `${siteUrl}/products?q={search_term_string}`,
         "query-input": "required name=search_term_string",
       },
     },
@@ -244,7 +244,7 @@ const structuredData = {
           name: "Shop có bán sỉ bột kim tuyến đủ màu sắc và kích cỡ hạt không?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Có. Cửa hàng MAI KIM TUYẾN là xưởng kho chuyên sỉ & lẻ bột kim tuyến đủ màu sắc (vàng, bạc, ngũ sắc ánh cầu vồng, kim tuyến cừ, nhũ ánh...) và đủ bảng size từ hạt mịn 1/128, 1/96, 1/64 đến hạt to lục giác, hình sao, hình tim phục vụ mỹ thuật, nail, in lụa, trang trí Tết và sản xuất công nghiệp.",
+            text: "Có. Cửa hàng MAI KIM TUYẾN là tổng kho chuyên sỉ & lẻ bột kim tuyến đủ màu sắc (vàng, bạc, ngũ sắc ánh cầu vồng, kim tuyến cừ, nhũ ánh...) và đủ bảng size từ hạt mịn 1/128, 1/96, 1/64 đến hạt to lục giác, hình sao, hình tim phục vụ mỹ thuật, nail, in lụa, trang trí Tết và sản xuất công nghiệp.",
           },
         },
         {
@@ -260,7 +260,7 @@ const structuredData = {
           name: "Bột nhũ Camay và Bột dạ quang tại shop có chất lượng thế nào?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Bột nhũ Camay tại xưởng là loại bột ngọc trai ánh kim cao cấp, hạt siêu mịn, bám dính tốt, tạo vân đá hoa cương và sơn phủ kim loại sang trọng. Bột dạ quang phát sáng mạnh mẽ và lâu trong bóng tối sau khi hấp thụ ánh sáng, chuyên dùng trong mỹ thuật và thi công cảnh báo an toàn.",
+            text: "Bột nhũ Camay tại cửa hàng là loại bột ngọc trai ánh kim cao cấp, hạt siêu mịn, bám dính tốt, tạo vân đá hoa cương và sơn phủ kim loại sang trọng. Bột dạ quang phát sáng mạnh mẽ và lâu trong bóng tối sau khi hấp thụ ánh sáng, chuyên dùng trong mỹ thuật và thi công cảnh báo an toàn.",
           },
         },
         {
@@ -288,9 +288,9 @@ export default function RootLayout({
           name="google-site-verification"
           content="sX6OMUfsVbEpTeWjjvd2qdmCtwGsfNNF0SlxoeyX1ek"
         />
-        <link rel="icon" href="/logo.jpg" type="image/jpeg" />
-        <link rel="shortcut icon" href="/logo.jpg" type="image/jpeg" />
-        <link rel="apple-touch-icon" href="/logo.jpg" />
+        <link rel="icon" href="/logo2.jpeg" type="image/jpeg" />
+        <link rel="shortcut icon" href="/logo2.jpeg" type="image/jpeg" />
+        <link rel="apple-touch-icon" href="/logo2.jpeg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

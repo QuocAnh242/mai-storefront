@@ -22,8 +22,9 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
+  const isContact = Boolean(product.isContactPrice || product.price <= 1);
   const discountPercent =
-    product.originalPrice && product.originalPrice > product.price
+    !isContact && product.originalPrice && product.originalPrice > product.price
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
@@ -113,13 +114,21 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
 
               {/* Pricing */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-baseline gap-3">
-                <span className="text-2xl font-black text-sky-950">
-                  {formatVND(product.price)}
-                </span>
-                {product.originalPrice && product.originalPrice > product.price && (
-                  <span className="text-sm font-semibold text-slate-400 line-through">
-                    {formatVND(product.originalPrice)}
+                {isContact ? (
+                  <span className="text-2xl font-black text-sky-700">
+                    Liên hệ báo giá
                   </span>
+                ) : (
+                  <>
+                    <span className="text-2xl font-black text-sky-950">
+                      {formatVND(product.price)}
+                    </span>
+                    {product.originalPrice && product.originalPrice > product.price && (
+                      <span className="text-sm font-semibold text-slate-400 line-through">
+                        {formatVND(product.originalPrice)}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -151,7 +160,7 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
                     </button>
                   </div>
                   <span className="text-xs text-slate-400 font-medium">
-                    = {formatVND(product.price * quantity)}
+                    = {isContact ? 'Liên hệ' : formatVND(product.price * quantity)}
                   </span>
                 </div>
               </div>

@@ -17,7 +17,7 @@ export function FloatingChatWidget() {
           <div className="bg-sky-950 text-white p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <img
-                src="/logo.jpg"
+                src="/logo2.jpeg"
                 alt="Mai Kim Tuyến"
                 className="w-8 h-8 rounded-full object-cover border border-sky-400 shrink-0"
               />
@@ -73,19 +73,40 @@ export function FloatingChatWidget() {
               </div>
             </a>
 
-            {/* 3. Hotline */}
-            <a
-              href={`tel:${INITIAL_STORE_SETTINGS.zaloPhone}`}
-              className="flex items-center gap-3 p-2.5 rounded-xl bg-white hover:bg-sky-50 border border-slate-200/80 hover:border-sky-300 text-slate-800 transition-all cursor-pointer group shadow-2xs"
-            >
-              <div className="w-9 h-9 rounded-full bg-sky-950 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                <Phone className="w-4 h-4 text-sky-400" />
+            {/* 3. Hotline Trực Tiếp (Hỗ trợ 3 số tinh tế) */}
+            <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 text-slate-800 shadow-2xs space-y-1.5">
+              <div className="flex items-center gap-2 px-0.5">
+                <div className="w-7 h-7 rounded-full bg-sky-950 flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <Phone className="w-3.5 h-3.5 text-sky-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h5 className="font-bold text-xs text-slate-900 leading-tight">Gọi Hotline Trực Tiếp</h5>
+                  <p className="text-[10px] text-slate-500">Tư vấn báo giá &amp; đặt hàng</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h5 className="font-bold text-xs text-slate-900 group-hover:text-sky-900">Gọi Hotline Trực Tiếp</h5>
-                <p className="text-[10px] font-bold text-sky-900">{INITIAL_STORE_SETTINGS.hotline}</p>
+
+              <div className="grid grid-cols-1 gap-1 pt-1 border-t border-slate-100">
+                {(INITIAL_STORE_SETTINGS.hotlines || [
+                  { number: '0704479791', display: '0704 479 791', label: 'Ms Mai' },
+                  { number: '0908998098', display: '0908 998 098', label: 'Mrs Quoc' },
+                  { number: '0798584841', display: '0798 584 841', label: 'Ms Linh' },
+                ]).map((h) => (
+                  <a
+                    key={h.number}
+                    href={`tel:${h.number}`}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50/80 hover:bg-sky-50 border border-slate-200/60 hover:border-sky-300 transition-all cursor-pointer group/item"
+                  >
+                    <span className="text-xs font-bold text-sky-950 group-hover/item:text-sky-700 flex items-center gap-2">
+                      <Phone className="w-3 h-3 text-sky-600 shrink-0" />
+                      {h.display}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium group-hover/item:text-sky-700">
+                      {h.label}
+                    </span>
+                  </a>
+                ))}
               </div>
-            </a>
+            </div>
           </div>
         </div>
       )}
@@ -102,7 +123,7 @@ export function FloatingChatWidget() {
           </div>
         ) : (
           <img
-            src="/logo.jpg"
+            src="/logo2.jpeg"
             alt="Mai Kim Tuyến Chat"
             className="w-full h-full object-cover rounded-full"
           />

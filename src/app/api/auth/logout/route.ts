@@ -1,8 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rateLimit';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    // 1. IP Rate Limiting: Max 30 requests per minute
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+    const rateLimit = checkRateLimit(`logout_${clientIp}`, 30, 60);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'RATE_LIMIT_EXCEEDED', message: 'Quá nhiều yêu cầu đăng xuất' },
+        { status: 429 }
+      );
+    }
+
     if (isSupabaseConfigured()) {
       await supabase.auth.signOut();
     }

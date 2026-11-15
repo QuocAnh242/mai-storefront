@@ -115,6 +115,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               originalPrice: item.original_price
                 ? Number(item.original_price)
                 : undefined,
+              isContactPrice: Boolean(
+                item.is_contact_price ||
+                Number(item.price) <= 1
+              ),
               unit: item.unit,
               description: item.description,
               categoryId: item.category_id,

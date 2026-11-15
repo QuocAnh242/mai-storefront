@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Product } from '@/shared/types';
+import { getProductUrl } from '@/lib/productUrl';
 
 interface ProductCardProps {
   product: Product;
@@ -14,12 +15,14 @@ export function ProductCard({ product }: ProductCardProps) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
+  const isContact = Boolean(product.isContactPrice || product.price <= 1);
+
   const discountPercent =
-    product.originalPrice && product.originalPrice > product.price
+    !isContact && product.originalPrice && product.originalPrice > product.price
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  const detailUrl = `/san-pham/${product.slug || product.id}`;
+  const detailUrl = getProductUrl(product);
 
   return (
     <Link
@@ -57,13 +60,21 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Price */}
         <div className="pt-0.5 flex items-baseline gap-1.5 flex-wrap">
-          <span className="text-xs sm:text-sm font-black text-sky-950">
-            {formatVND(product.price)}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[10px] sm:text-xs text-slate-400 line-through">
-              {formatVND(product.originalPrice)}
+          {isContact ? (
+            <span className="text-xs sm:text-sm font-bold text-sky-700">
+              Liên hệ
             </span>
+          ) : (
+            <>
+              <span className="text-xs sm:text-sm font-black text-sky-950">
+                {formatVND(product.price)}
+              </span>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <span className="text-[10px] sm:text-xs text-slate-400 line-through">
+                  {formatVND(product.originalPrice)}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>

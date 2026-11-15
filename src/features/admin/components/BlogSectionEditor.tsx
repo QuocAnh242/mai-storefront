@@ -177,7 +177,7 @@ export default function BlogSectionEditor({ initialPost, onSave, isEditing }: Bl
           hasAdAfter: !sec.hasAdAfter,
           adConfig: !sec.hasAdAfter
             ? {
-                bannerTitle: 'Chương Trình Khuyến Mãi Tận Xưởng Mai Kim Tuyến',
+                bannerTitle: 'Chương Trình Khuyến Mãi Phân Phối Mai Kim Tuyến',
                 bannerSubtitle: 'Đồng giá bột màu & vật tư dán bảo quản chất lượng cao',
                 bannerCtaText: 'Xem Báo Giá',
               }
@@ -233,7 +233,7 @@ export default function BlogSectionEditor({ initialPost, onSave, isEditing }: Bl
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/tin-tuc"
+            href="/admin/news"
             className="p-2.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
             title="Quay lại danh sách"
           >

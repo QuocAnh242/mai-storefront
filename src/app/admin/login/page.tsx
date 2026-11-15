@@ -52,7 +52,8 @@ export default function AdminLoginPage() {
 
       // Successful JWT Login
       showToast('Đăng nhập thành công! Chào mừng Quản trị viên', 'success');
-      router.push('/admin/san-pham');
+      const fromParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('from') : null;
+      router.push(fromParam && fromParam.startsWith('/admin') ? fromParam : '/admin');
       router.refresh();
     } catch (err: any) {
       const msg = err.message || 'Lỗi hệ thống đăng nhập';
@@ -67,7 +68,7 @@ export default function AdminLoginPage() {
     <div className="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl space-y-6">
       <div className="text-center space-y-2">
         <img
-          src="/logo.jpg"
+          src="/logo2.jpeg"
           alt="Mai Kim Tuyến Logo"
           className="w-16 h-16 rounded-full object-cover border-2 border-sky-100 mx-auto shadow-xs"
         />

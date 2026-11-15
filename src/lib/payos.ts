@@ -76,8 +76,8 @@ export async function createPayOSCheckout(order: Order, baseUrl: string): Promis
           orderCode: numericOrderCode,
           amount: order.totalAmount,
           description: `Thanh toan đơn ${order.orderCode}`.slice(0, 25),
-          returnUrl: `${baseUrl}/san-pham?order_status=success&code=${order.orderCode}`,
-          cancelUrl: `${baseUrl}/san-pham?order_status=cancelled&code=${order.orderCode}`,
+          returnUrl: `${baseUrl}/products?order_status=success&code=${order.orderCode}`,
+          cancelUrl: `${baseUrl}/products?order_status=cancelled&code=${order.orderCode}`,
         })
       });
       const data = await res.json();

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
     const { email, password } = parseResult.data;
 
-    // 3. Supabase Auth JWT Verification
+    // 3. Supabase Auth Verification (Real API)
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
         { error: 'SUPABASE_NOT_CONFIGURED', message: 'Hệ thống Supabase chưa được cấu hình biến môi trường' },
@@ -91,7 +91,6 @@ export async function POST(req: Request) {
       maxAge: 30 * 86400,
     });
 
-    // Also set legacy admin indicator for compatibility
     response.cookies.set('mkt_admin_logged_in', 'true', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

@@ -72,7 +72,7 @@ export default function BlogLivePreview({ post, sections }: BlogLivePreviewProps
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
             </div>
             <span className="font-mono text-[10px] text-slate-400 truncate max-w-[180px]">
-              mai-store.vn/tin-tuc/{post.slug || 'bai-viet'}
+              mai-store.vn/news/{post.slug || 'bai-viet'}
             </span>
           </div>
 
@@ -232,7 +232,7 @@ export default function BlogLivePreview({ post, sections }: BlogLivePreviewProps
                         </span>
                       </div>
                       <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
-                        {section.adConfig?.bannerTitle || 'Chương Trình Khuyến Mãi Tận Xưởng Mai Kim Tuyến'}
+                        {section.adConfig?.bannerTitle || 'Chương Trình Khuyến Mãi Phân Phối Mai Kim Tuyến'}
                       </h4>
                       <p className="text-[11px] text-slate-600">
                         {section.adConfig?.bannerSubtitle || 'Tặng kèm dụng cụ khi mua keo & bột kim tuyến số lượng lớn.'}
