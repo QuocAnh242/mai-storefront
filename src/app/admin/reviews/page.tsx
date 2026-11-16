@@ -66,20 +66,37 @@ export default function AdminReviewsPage() {
     }
   };
 
-  // Tải danh sách reviews
+  // Tải danh sách reviews với cơ chế auto-sync session nếu token hết hạn
   const loadReviews = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/reviews');
+      let res = await fetch('/api/admin/reviews');
+
+      // Tự động phục hồi phiên nếu token tạm thời hết hạn
+      if (res.status === 401) {
+        try {
+          const syncRes = await fetch('/api/auth/session');
+          if (syncRes.ok) {
+            res = await fetch('/api/admin/reviews');
+          }
+        } catch {}
+      }
+
       const json = await safeJson(res);
       if (res.ok && json?.success) {
         setReviews(json.data || []);
         if (json.stats) setStats(json.stats);
       } else {
-        showToast(json?.error || 'Không thể tải danh sách đánh giá', 'error');
+        const errorMsg =
+          json?.message ||
+          json?.error ||
+          (res.status === 401
+            ? 'Phiên đăng nhập quản trị viên đã hết hạn. Vui lòng đăng nhập lại.'
+            : 'Không thể tải danh sách đánh giá');
+        showToast(errorMsg, 'error');
       }
     } catch (err: any) {
-      showToast(err.message || 'Lỗi tải đánh giá', 'error');
+      showToast(err.message || 'Lỗi kết nối tải đánh giá', 'error');
     } finally {
       setLoading(false);
     }

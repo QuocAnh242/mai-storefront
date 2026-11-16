@@ -267,3 +267,4 @@ export function TableRowsSkeleton({ rows = 4, cols = 5 }: { rows?: number; cols?
     </div>
   );
 }
+

@@ -2,23 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { sanitizeText } from '@/lib/sanitizer';
-
-// Helper: Xác thực phiên Quản trị viên
-async function verifyAdminAuth(req: NextRequest): Promise<boolean> {
-  const token = req.cookies.get('sb-access-token')?.value;
-  if (!token) return false;
-
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase.auth.getUser(token);
-      if (error || !data?.user) return false;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  return true;
-}
+import { verifyAdminAuth, applySessionCookies } from '@/lib/adminAuth';
 
 // GET: Lấy tất cả đánh giá cho Admin quản lý
 export async function GET(req: NextRequest) {
@@ -26,16 +10,19 @@ export async function GET(req: NextRequest) {
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
     const rateLimit = checkRateLimit(`adm_rev_get_${clientIp}`, 60, 60);
     if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED' }, { status: 429 });
+      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Quá nhiều yêu cầu, vui lòng thử lại sau.' }, { status: 429 });
     }
 
-    const isAuthed = await verifyAdminAuth(req);
-    if (!isAuthed) {
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.authorized) {
       return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
     }
 
     if (!isSupabaseConfigured()) {
-      return NextResponse.json({ success: true, data: [], stats: { total: 0, avg: 5.0, replied: 0, unreplied: 0 } });
+      return applySessionCookies(
+        NextResponse.json({ success: true, data: [], stats: { total: 0, avg: 5.0, replied: 0, unreplied: 0 } }),
+        authResult.newSession
+      );
     }
 
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
@@ -46,13 +33,16 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      if (error.code === 'PGRST205' || error.message.includes('not find the table')) {
-        return NextResponse.json({
-          success: true,
-          data: [],
-          stats: { total: 0, avg: 5.0, replied: 0, unreplied: 0 },
-          requiresTableSetup: true,
-        });
+      if (error.code === 'PGRST205' || error.message?.includes('not find the table') || error.message?.includes('does not exist')) {
+        return applySessionCookies(
+          NextResponse.json({
+            success: true,
+            data: [],
+            stats: { total: 0, avg: 5.0, replied: 0, unreplied: 0 },
+            requiresTableSetup: true,
+          }),
+          authResult.newSession
+        );
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -74,11 +64,13 @@ export async function GET(req: NextRequest) {
     const unreplied = total - replied;
     const avg = total > 0 ? Number((reviews.reduce((acc, c) => acc + c.rating, 0) / total).toFixed(1)) : 5.0;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: reviews,
       stats: { total, avg, replied, unreplied },
     });
+
+    return applySessionCookies(response, authResult.newSession);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -90,12 +82,12 @@ export async function PATCH(req: NextRequest) {
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
     const rateLimit = checkRateLimit(`adm_rev_patch_${clientIp}`, 40, 60);
     if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED' }, { status: 429 });
+      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
     }
 
-    const isAuthed = await verifyAdminAuth(req);
-    if (!isAuthed) {
-      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.authorized) {
+      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
     }
 
     const body = await req.json();
@@ -128,11 +120,12 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: 'Đã gửi phản hồi đến khách hàng thành công',
         data,
       });
+      return applySessionCookies(response, authResult.newSession);
     }
 
     // 2. Chỉnh sửa review (Edit)
@@ -155,11 +148,12 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: 'Đã cập nhật đánh giá thành công',
         data,
       });
+      return applySessionCookies(response, authResult.newSession);
     }
 
     // 3. Ẩn / Hiện đánh giá (Toggle Approve)
@@ -176,11 +170,12 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: isApproved ? 'Đã hiển thị đánh giá' : 'Đã ẩn đánh giá khỏi trang sản phẩm',
         data,
       });
+      return applySessionCookies(response, authResult.newSession);
     }
 
     return NextResponse.json({ error: 'Hành động không hợp lệ' }, { status: 400 });
@@ -192,9 +187,9 @@ export async function PATCH(req: NextRequest) {
 // DELETE: Xóa vĩnh viễn đánh giá
 export async function DELETE(req: NextRequest) {
   try {
-    const isAuthed = await verifyAdminAuth(req);
-    if (!isAuthed) {
-      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.authorized) {
+      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -215,12 +210,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Đã xóa đánh giá thành công',
     });
+    return applySessionCookies(response, authResult.newSession);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

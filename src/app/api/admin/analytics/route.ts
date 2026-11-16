@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { getLiveAnalyticsSummary } from "@/lib/analyticsStore";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { verifyAdminAuth, applySessionCookies } from "@/lib/adminAuth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,17 +22,9 @@ export async function GET(req: NextRequest) {
     }
 
     // 1. Admin Authentication Check
-    const token = req.cookies.get("sb-access-token")?.value;
-    if (!token) {
-      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-    }
-
-    if (isSupabaseConfigured()) {
-      const { data: authData, error: authErr } =
-        await supabase.auth.getUser(token);
-      if (authErr || !authData?.user) {
-        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-      }
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.authorized) {
+      return NextResponse.json({ error: "UNAUTHORIZED", message: "Yêu cầu quyền Quản trị viên" }, { status: 401 });
     }
 
     let todayViews = 0;
@@ -209,7 +202,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: true,
         data: {
@@ -228,6 +221,7 @@ export async function GET(req: NextRequest) {
         },
       },
     );
+    return applySessionCookies(response, authResult.newSession);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
