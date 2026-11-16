@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Phone, MessageCircle, MapPin, Mail, Clock, PackageCheck, Truck, Boxes, BadgePercent } from 'lucide-react';
+import { Phone, MapPin, Mail, Clock, PackageCheck, Truck, Boxes, BadgePercent } from 'lucide-react';
 import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
 
 export function Footer() {
@@ -121,7 +121,9 @@ export function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-md active:scale-95 cursor-pointer"
                 >
-                  <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                  <svg className="w-3.5 h-3.5 shrink-0 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.91 1.45 5.518 3.715 7.218V22l3.39-1.861c.92.256 1.897.394 2.895.394 5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.066 12.449l-2.548-2.721-4.97 2.721 5.466-5.801 2.607 2.72 4.911-2.72-5.466 5.801z" />
+                  </svg>
                   <span>Messenger</span>
                 </a>
               </div>
@@ -156,28 +158,34 @@ export function Footer() {
                   href={INITIAL_STORE_SETTINGS.facebookUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-xl bg-sky-900/80 hover:bg-sky-800 border border-sky-800/60 flex items-center justify-center transition-colors group"
+                  className="w-9 h-9 rounded-xl bg-sky-900/70 hover:bg-[#1877F2] border border-sky-800/70 hover:border-[#1877F2] text-sky-300 hover:text-white flex items-center justify-center transition-all duration-200 group shadow-2xs hover:scale-105 active:scale-95"
                   title="Facebook"
                 >
-                  <svg className="w-4 h-4 text-sky-300 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
                 </a>
                 <a
                   href={`https://zalo.me/${INITIAL_STORE_SETTINGS.zaloPhone}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-xl bg-sky-900/80 hover:bg-sky-800 border border-sky-800/60 flex items-center justify-center transition-colors group"
+                  className="w-9 h-9 rounded-xl bg-sky-900/70 hover:bg-[#0068FF] border border-sky-800/70 hover:border-[#0068FF] text-sky-300 hover:text-white flex items-center justify-center transition-all duration-200 group shadow-2xs hover:scale-105 active:scale-95"
                   title="Zalo"
                 >
-                  <span className="text-[10px] font-black text-sky-300 group-hover:text-white transition-colors uppercase">Zalo</span>
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.49 10.272v-.45h1.347v6.322h-.77a.576.576 0 0 1-.577-.573v.001a3.27 3.27 0 0 1-1.938.632a3.284 3.284 0 0 1-3.284-3.282a3.284 3.284 0 0 1 3.284-3.282a3.27 3.27 0 0 1 1.937.632zM6.919 7.79v.205c0 .382-.051.694-.3 1.06l-.03.034a8 8 0 0 0-.242.285L2.024 14.8h4.895v.768a.576.576 0 0 1-.577.576H0v-.362c0-.443.11-.641.25-.847L4.858 9.23H.192V7.79zm8.551 8.354a.48.48 0 0 1-.48-.48V7.79h1.441v8.354zM20.693 9.6a3.306 3.306 0 1 1 .002 6.612a3.306 3.306 0 0 1-.002-6.612m-10.14 5.253a1.932 1.932 0 1 0 0-3.863a1.932 1.932 0 0 0 0 3.863m10.14-.003a1.945 1.945 0 1 0 0-3.89a1.945 1.945 0 0 0 0 3.89"/>
+                  </svg>
                 </a>
                 <a
                   href="https://m.me/chuyencungcapkimtuyensivale"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-xl bg-sky-900/80 hover:bg-sky-800 border border-sky-800/60 flex items-center justify-center transition-colors group"
+                  className="w-9 h-9 rounded-xl bg-sky-900/70 hover:bg-[#0084FF] border border-sky-800/70 hover:border-[#0084FF] text-sky-300 hover:text-white flex items-center justify-center transition-all duration-200 group shadow-2xs hover:scale-105 active:scale-95"
                   title="Messenger"
                 >
-                  <MessageCircle className="w-4 h-4 text-sky-300 group-hover:text-white transition-colors" />
+                  <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.91 1.45 5.518 3.715 7.218V22l3.39-1.861c.92.256 1.897.394 2.895.394 5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.066 12.449l-2.548-2.721-4.97 2.721 5.466-5.801 2.607 2.72 4.911-2.72-5.466 5.801z" />
+                  </svg>
                 </a>
               </div>
             </div>

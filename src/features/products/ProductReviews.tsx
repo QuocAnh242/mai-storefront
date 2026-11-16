@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { User } from 'lucide-react';
 import { ProductReview } from '@/shared/types';
 
 interface ProductReviewsProps {
@@ -209,14 +210,19 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
               Tên của bạn (*)
             </label>
-            <input
-              type="text"
-              required
-              placeholder="Tên của bạn"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-slate-900 focus:bg-white font-medium transition-colors"
-            />
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <User className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                required
+                placeholder="Tên của bạn"
+                value={authorName}
+                onChange={(e) => setAuthorName(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl pl-10 pr-3.5 py-2.5 outline-none focus:border-slate-900 focus:bg-white font-medium transition-colors"
+              />
+            </div>
           </div>
 
           {/* 2. Đánh giá: Thang điểm 1 (Rất tệ) -> 5 (Rất tốt) UX thân thiện */}
@@ -319,9 +325,14 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             </div>
 
             <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-              <div>
-                <span className="font-semibold text-slate-400 block text-[11px]">Người đánh giá:</span>
-                <span className="font-bold text-slate-900 text-sm">{authorName}</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-slate-200/80 flex items-center justify-center text-slate-600 shrink-0">
+                  <User className="w-4 h-4 text-slate-600" />
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-400 block text-[10px]">Người đánh giá:</span>
+                  <span className="font-bold text-slate-900 text-sm">{authorName}</span>
+                </div>
               </div>
               <div>
                 <span className="font-semibold text-slate-400 block text-[11px]">Mức độ hài lòng:</span>
@@ -383,43 +394,52 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         ) : (
           <div className="divide-y divide-slate-100 bg-white rounded-2xl border border-slate-200 overflow-hidden">
             {reviews.map((r) => (
-              <div key={r.id} className="p-4 sm:p-5 space-y-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">{r.authorName}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                      r.rating >= 4
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : r.rating === 3
-                        ? 'bg-slate-100 text-slate-700 border-slate-200'
-                        : 'bg-rose-50 text-rose-800 border-rose-200'
-                    }`}>
-                      {r.rating} / 5 điểm
-                    </span>
+              <div key={r.id} className="p-4 sm:p-5">
+                <div className="flex items-start gap-3 sm:gap-3.5">
+                  {/* Profile User Icon Avatar */}
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0 mt-0.5 shadow-2xs">
+                    <User className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-600" />
                   </div>
-                  <span className="text-[11px] text-slate-400">{formatDate(r.createdAt)}</span>
-                </div>
 
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                  {r.content}
-                </p>
-
-                {/* Phản hồi từ cửa hàng Mai Kim Tuyến (nếu có) */}
-                {r.replyContent && (
-                  <div className="mt-3 bg-slate-50 border-l-2 border-slate-900 p-3 sm:p-3.5 rounded-r-xl space-y-1">
+                  <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-slate-900">
-                        Phản hồi từ Cửa hàng Mai Kim Tuyến
-                      </span>
-                      {r.repliedAt && (
-                        <span className="text-[10px] text-slate-400">{formatDate(r.repliedAt)}</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900">{r.authorName}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          r.rating >= 4
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : r.rating === 3
+                            ? 'bg-slate-100 text-slate-700 border-slate-200'
+                            : 'bg-rose-50 text-rose-800 border-rose-200'
+                        }`}>
+                          {r.rating} / 5 điểm
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400">{formatDate(r.createdAt)}</span>
                     </div>
-                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
-                      {r.replyContent}
+
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                      {r.content}
                     </p>
+
+                    {/* Phản hồi từ cửa hàng Mai Kim Tuyến (nếu có) */}
+                    {r.replyContent && (
+                      <div className="mt-3 bg-slate-50 border-l-2 border-slate-900 p-3 sm:p-3.5 rounded-r-xl space-y-1">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-slate-900">
+                            Phản hồi từ Cửa hàng Mai Kim Tuyến
+                          </span>
+                          {r.repliedAt && (
+                            <span className="text-[10px] text-slate-400">{formatDate(r.repliedAt)}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
+                          {r.replyContent}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
