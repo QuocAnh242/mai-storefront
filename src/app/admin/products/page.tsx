@@ -7,9 +7,10 @@ import { ProductFormModal } from '@/features/admin/ProductFormModal';
 import { Product } from '@/shared/types';
 import { getProductUrl } from '@/lib/productUrl';
 import Link from 'next/link';
+import { Loading, TableRowsSkeleton } from '@/components/ui/Loading';
 
 export default function AdminSanPhamPage() {
-  const { products, categories, featuredProducts, reorderFeaturedProducts, updateProduct, deleteProduct } = useStore();
+  const { products, categories, featuredProducts, reorderFeaturedProducts, updateProduct, deleteProduct, isLoading } = useStore();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [adminSearch, setAdminSearch] = useState('');
@@ -218,7 +219,20 @@ export default function AdminSanPhamPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedProducts.length === 0 ? (
+              {isLoading && products.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8">
+                    <Loading
+                      size="md"
+                      text="Đang tải danh sách sản phẩm..."
+                      subtext="Đang kết nối cơ sở dữ liệu kho hàng"
+                    />
+                    <div className="mt-4">
+                      <TableRowsSkeleton rows={5} />
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-10 text-slate-400">
                     Không tìm thấy sản phẩm nào phù hợp.

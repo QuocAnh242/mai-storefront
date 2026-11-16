@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/shared/context/StoreContext';
 import { Calendar, User, ArrowRight, Clock, Search, BookOpen, Sparkles } from 'lucide-react';
+import { Loading } from '@/components/ui/Loading';
 
 export default function BlogListPage() {
-  const { blogs } = useStore();
+  const { blogs, isLoading } = useStore();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -85,7 +86,27 @@ export default function BlogListPage() {
       </div>
 
       {/* ─── Articles Content ─── */}
-      {filteredBlogs.length === 0 ? (
+      {isLoading && blogs.length === 0 ? (
+        <div className="space-y-8 py-6">
+          <div className="py-6 flex justify-center">
+            <Loading
+              size="lg"
+              text="Đang tải cẩm nang & tin tức..."
+              subtext="Đang kết nối thư viện bài viết của Mai Kim Tuyến"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+                <div className="aspect-video bg-slate-100 rounded-xl" />
+                <div className="h-3 bg-slate-200 rounded w-1/3" />
+                <div className="h-5 bg-slate-200 rounded w-5/6" />
+                <div className="h-3 bg-slate-100 rounded w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : filteredBlogs.length === 0 ? (
         <div className="text-center py-16 bg-slate-50 rounded-3xl border border-slate-200 p-8 space-y-4 max-w-lg mx-auto">
           <div className="w-14 h-14 bg-sky-50 rounded-2xl flex items-center justify-center mx-auto text-sky-900 border border-sky-100">
             <BookOpen className="w-7 h-7" />

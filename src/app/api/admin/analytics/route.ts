@@ -47,69 +47,95 @@ export async function GET(req: NextRequest) {
     let dbConnected = false;
     let requiresTableSetup = false;
 
-    // 2. Query directly from Supabase Cloud Database
+    // 2. Query directly from Supabase Cloud Database (Parallelized for Ultra-Fast Loading)
     if (isSupabaseConfigured()) {
       const dbClient = supabaseAdmin || supabase;
       try {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
 
-        // A. Count today's pageviews and distinct visitors
-        const { data: todayViewsData, error: pvErr } = await dbClient
-          .from("site_pageviews")
-          .select("visitor_id")
-          .gte("created_at", todayStart.toISOString());
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
 
-        if (pvErr) {
-          // If table does not exist in schema cache
-          if (
-            pvErr.message?.includes("schema cache") ||
-            pvErr.message?.includes("does not exist")
-          ) {
-            requiresTableSetup = true;
-          }
-        } else if (todayViewsData) {
-          dbConnected = true;
-          todayViews = todayViewsData.length;
-          todayVisitors = new Set(
-            todayViewsData.map((r: any) => r.visitor_id).filter(Boolean),
-          ).size;
-
-          // B. Total pageviews all time (cộng dồn cả lượt xem đã lưu trữ sau các đợt dọn dẹp 30 ngày)
-          const { count: totalCount } = await dbClient
+        // Run all 5 database queries in parallel with Promise.allSettled
+        const [
+          todayViewsRes,
+          totalCountRes,
+          archiveRes,
+          trendRes,
+          prodViewsRes,
+        ] = await Promise.allSettled([
+          // A. Today's pageviews
+          dbClient
             .from("site_pageviews")
-            .select("*", { count: "exact", head: true });
+            .select("visitor_id")
+            .gte("created_at", todayStart.toISOString()),
 
-          let archivedCount = 0;
-          try {
-            const { data: archiveRow } = await dbClient
-              .from("analytics_archive")
-              .select("archived_pageviews")
-              .eq("id", "global")
-              .maybeSingle();
-            if (archiveRow?.archived_pageviews) {
-              archivedCount = Number(archiveRow.archived_pageviews);
-            }
-          } catch {
-            archivedCount = 0;
-          }
+          // B. Total pageviews count all time
+          dbClient
+            .from("site_pageviews")
+            .select("*", { count: "exact", head: true }),
 
-          totalTrackedViews = (totalCount || todayViews) + archivedCount;
+          // C. Archived pageviews from retention rollups
+          dbClient
+            .from("analytics_archive")
+            .select("archived_pageviews")
+            .eq("id", "global")
+            .maybeSingle(),
 
-          // C. 7-day trend
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-          sevenDaysAgo.setHours(0, 0, 0, 0);
-
-          const { data: trendData } = await dbClient
+          // D. 7-day trend
+          dbClient
             .from("site_pageviews")
             .select("visitor_id, created_at")
             .gte("created_at", sevenDaysAgo.toISOString())
-            .order("created_at", { ascending: true });
+            .order("created_at", { ascending: true }),
 
+          // E. Top viewed products
+          dbClient
+            .from("product_views")
+            .select("product_id, product_title")
+            .limit(500),
+        ]);
+
+        // Process Today Views & Visitors
+        if (todayViewsRes.status === "fulfilled") {
+          const { data: todayViewsData, error: pvErr } = todayViewsRes.value;
+          if (pvErr) {
+            if (
+              pvErr.message?.includes("schema cache") ||
+              pvErr.message?.includes("does not exist")
+            ) {
+              requiresTableSetup = true;
+            }
+          } else if (todayViewsData) {
+            dbConnected = true;
+            todayViews = todayViewsData.length;
+            todayVisitors = new Set(
+              todayViewsData.map((r: any) => r.visitor_id).filter(Boolean),
+            ).size;
+          }
+        }
+
+        // Process Total Count & Archive
+        let archivedCount = 0;
+        if (archiveRes.status === "fulfilled" && archiveRes.value.data?.archived_pageviews) {
+          archivedCount = Number(archiveRes.value.data.archived_pageviews) || 0;
+        }
+
+        let exactCount = todayViews;
+        if (totalCountRes.status === "fulfilled" && typeof totalCountRes.value.count === "number") {
+          exactCount = totalCountRes.value.count;
+        }
+        totalTrackedViews = exactCount + archivedCount;
+
+        // Process 7-day Trend
+        if (trendRes.status === "fulfilled" && trendRes.value.data) {
+          const trendData = trendRes.value.data;
           const trendsMap: {
             [dateStr: string]: { views: number; visitors: Set<string> };
           } = {};
+
           (trendData || []).forEach((row: any) => {
             const dateStr = new Date(row.created_at)
               .toISOString()
@@ -136,13 +162,11 @@ export async function GET(req: NextRequest) {
               visitors: entry ? entry.visitors.size : 0,
             });
           }
+        }
 
-          // D. Top viewed products
-          const { data: prodViews } = await dbClient
-            .from("product_views")
-            .select("product_id, product_title")
-            .limit(500);
-
+        // Process Top Products
+        if (prodViewsRes.status === "fulfilled" && prodViewsRes.value.data) {
+          const prodViews = prodViewsRes.value.data;
           if (prodViews && prodViews.length > 0) {
             const counts: {
               [id: string]: { id: string; title: string; views: number };
@@ -185,18 +209,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        todayViews,
-        todayVisitors,
-        totalTrackedViews,
-        trends,
-        topProducts,
-        dbConnected,
-        requiresTableSetup,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          todayViews,
+          todayVisitors,
+          totalTrackedViews,
+          trends,
+          topProducts,
+          dbConnected,
+          requiresTableSetup,
+        },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "private, max-age=10, stale-while-revalidate=20",
+        },
+      },
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

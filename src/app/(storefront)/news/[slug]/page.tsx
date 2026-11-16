@@ -6,11 +6,12 @@ import { useParams } from 'next/navigation';
 import { useStore } from '@/shared/context/StoreContext';
 import { Calendar, User, ArrowLeft, Phone, Share2, Tag, BookOpen, Clock, Check } from 'lucide-react';
 import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
+import { Loading } from '@/components/ui/Loading';
 
 export default function BlogDetailPage() {
   const params = useParams();
   const slug = params?.slug as string;
-  const { blogs } = useStore();
+  const { blogs, isLoading } = useStore();
   const [copiedLink, setCopiedLink] = useState(false);
 
   const post = blogs.find((b) => b.slug === slug) || blogs[0];
@@ -22,6 +23,30 @@ export default function BlogDetailPage() {
       setTimeout(() => setCopiedLink(false), 2500);
     }
   };
+
+  if (isLoading && !post) {
+    return (
+      <article className="max-w-4xl mx-auto space-y-8 py-12">
+        <div className="py-8 flex justify-center">
+          <Loading
+            size="lg"
+            text="Đang tải bài viết..."
+            subtext="Đang đồng bộ cẩm nang chia sẻ từ Mai Kim Tuyến"
+          />
+        </div>
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 space-y-6 animate-pulse">
+          <div className="h-4 bg-slate-200 rounded w-1/4" />
+          <div className="h-8 bg-slate-200 rounded w-3/4" />
+          <div className="aspect-video bg-slate-100 rounded-2xl w-full" />
+          <div className="space-y-3">
+            <div className="h-4 bg-slate-200 rounded w-full" />
+            <div className="h-4 bg-slate-200 rounded w-5/6" />
+            <div className="h-4 bg-slate-200 rounded w-2/3" />
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   if (!post) {
     return (

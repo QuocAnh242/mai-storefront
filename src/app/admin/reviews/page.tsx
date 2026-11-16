@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useStore } from '@/shared/context/StoreContext';
 import { useToast } from '@/shared/context/ToastContext';
 import { ProductReview } from '@/shared/types';
+import { Loading, TableRowsSkeleton } from '@/components/ui/Loading';
 import {
   MessageSquare,
   Search,
@@ -314,9 +315,20 @@ export default function AdminReviewsPage() {
 
         <button
           onClick={loadReviews}
-          className="self-start sm:self-auto text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+          disabled={loading}
+          className="self-start sm:self-auto text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg transition-colors border border-slate-200 cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5"
         >
-          Làm mới dữ liệu
+          {loading ? (
+            <>
+              <svg className="animate-spin w-3.5 h-3.5 text-slate-600" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>Đang tải...</span>
+            </>
+          ) : (
+            'Làm mới dữ liệu'
+          )}
         </button>
       </div>
 
@@ -367,8 +379,13 @@ export default function AdminReviewsPage() {
       {/* ─── Reviews List (Flat Card / Table Design) ─── */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-400 font-medium">
-            Đang tải dữ liệu đánh giá...
+          <div className="p-8 space-y-6">
+            <Loading
+              size="md"
+              text="Đang tải dữ liệu đánh giá..."
+              subtext="Đang đồng bộ nhận xét của khách hàng từ hệ thống"
+            />
+            <TableRowsSkeleton rows={5} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center space-y-2">

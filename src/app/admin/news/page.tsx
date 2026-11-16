@@ -4,9 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { useStore } from '@/shared/context/StoreContext';
 import { Newspaper, Plus, Trash2, Edit, Tag, Layers, ExternalLink } from 'lucide-react';
+import { Loading } from '@/components/ui/Loading';
 
 export default function AdminTinTucPage() {
-  const { blogs, deleteBlogPost } = useStore();
+  const { blogs, deleteBlogPost, isLoading } = useStore();
 
   return (
     <div className="space-y-6">
@@ -32,7 +33,15 @@ export default function AdminTinTucPage() {
       </div>
 
       {/* Blogs Grid List */}
-      {blogs.length > 0 ? (
+      {isLoading && blogs.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-12">
+          <Loading
+            size="lg"
+            text="Đang tải danh sách bài viết..."
+            subtext="Đang kết nối thư viện tin tức và cẩm nang"
+          />
+        </div>
+      ) : blogs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {blogs.map((post) => {
             const sectionCount = post.sections?.length || 0;

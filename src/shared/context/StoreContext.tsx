@@ -11,6 +11,7 @@ import {
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 interface StoreContextType {
+  isLoading: boolean;
   products: Product[];
   categories: Category[];
   blogs: BlogPost[];
@@ -52,6 +53,7 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -90,130 +92,129 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ensureAuthSession();
   }, []);
 
-  // Load all data from Supabase on mount
+  // Load all data from Supabase on mount in parallel
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       // No DB: use hardcoded initial data
       setProducts(INITIAL_PRODUCTS);
       setCategories(INITIAL_CATEGORIES);
       setBlogs(INITIAL_BLOGS);
+      setIsLoading(false);
       return;
     }
 
-    // Products
-    supabase
-      .from("products")
-      .select("*")
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setProducts(
-            data.map((item: any) => ({
-              id: item.id,
-              title: item.title,
-              slug: item.slug,
-              price: Number(item.price),
-              originalPrice: item.original_price
-                ? Number(item.original_price)
-                : undefined,
-              isContactPrice: Boolean(
-                item.is_contact_price ||
-                Number(item.price) <= 1
-              ),
-              unit: item.unit,
-              description: item.description,
-              categoryId: item.category_id,
-              categoryName: item.category_name,
-              subcategoryId: item.subcategory_id,
-              subcategoryName: item.subcategory_name,
-              images: item.images || [],
-              isFeatured: item.is_featured,
-              displayOrder: item.display_order || 0,
-              inStock: item.in_stock,
-              specs: item.specs || {},
-              createdAt: item.created_at,
-            })),
-          );
-        } else {
-          setProducts(INITIAL_PRODUCTS);
-        }
-      });
+    let isMounted = true;
+    setIsLoading(true);
 
-    // Categories
-    supabase
-      .from("categories")
-      .select("*")
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setCategories(
-            data.map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              description: item.description,
-              subcategories: item.subcategories || [],
-            })),
-          );
-        } else {
-          setCategories(INITIAL_CATEGORIES);
-        }
-      });
+    Promise.allSettled([
+      supabase.from("products").select("*"),
+      supabase.from("categories").select("*"),
+      supabase.from("blogs").select("*").order("created_at", { ascending: false }),
+      supabase.from("orders").select("*").order("created_at", { ascending: false }),
+    ]).then(([prodRes, catRes, blogRes, orderRes]) => {
+      if (!isMounted) return;
 
-    // Blogs
-    supabase
-      .from("blogs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setBlogs(
-            data.map((item: any) => ({
-              id: item.id,
-              title: item.title,
-              slug: item.slug,
-              category: item.category || "Mẹo hay",
-              thumbnail: item.thumbnail,
-              summary: item.summary,
-              content: item.content || "",
-              sections: item.sections || [],
-              author: item.author || "Chị Mai Kim Tuyến",
-              isPublished: item.is_published ?? true,
-              createdAt: item.created_at
-                ? new Date(item.created_at).toISOString().split("T")[0]
-                : new Date().toISOString().split("T")[0],
-            })),
-          );
-        } else {
-          setBlogs(INITIAL_BLOGS);
-        }
-      });
+      // 1. Process Products
+      if (prodRes.status === "fulfilled" && prodRes.value.data && prodRes.value.data.length > 0) {
+        setProducts(
+          prodRes.value.data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            slug: item.slug,
+            price: Number(item.price),
+            originalPrice: item.original_price ? Number(item.original_price) : undefined,
+            isContactPrice: Boolean(item.is_contact_price || Number(item.price) <= 1),
+            unit: item.unit,
+            description: item.description,
+            categoryId: item.category_id,
+            categoryName: item.category_name,
+            subcategoryId: item.subcategory_id,
+            subcategoryName: item.subcategory_name,
+            images: item.images || [],
+            isFeatured: item.is_featured,
+            displayOrder: item.display_order || 0,
+            inStock: item.in_stock,
+            specs: item.specs || {},
+            createdAt: item.created_at,
+          }))
+        );
+      } else {
+        setProducts(INITIAL_PRODUCTS);
+      }
 
-    // Orders
-    supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data) {
-          setOrders(
-            data.map((item: any) => ({
-              id: item.id,
-              orderCode: item.order_code,
-              customerName: item.customer_name,
-              customerPhone: item.customer_phone,
-              customerAddress: item.customer_address,
-              customerNote: item.customer_note,
-              totalAmount: Number(item.total_amount),
-              paymentMethod: item.payment_method,
-              paymentStatus: item.payment_status,
-              items: item.items || [],
-              payosCheckoutUrl: item.payos_checkout_url,
-              payosQrCodeUrl: item.payos_qr_code_url,
-              createdAt: item.created_at,
-              paidAt: item.paid_at,
-            })),
-          );
-        }
-      });
+      // 2. Process Categories
+      if (catRes.status === "fulfilled" && catRes.value.data && catRes.value.data.length > 0) {
+        setCategories(
+          catRes.value.data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            slug: item.slug,
+            description: item.description,
+            subcategories: item.subcategories || [],
+          }))
+        );
+      } else {
+        setCategories(INITIAL_CATEGORIES);
+      }
+
+      // 3. Process Blogs
+      if (blogRes.status === "fulfilled" && blogRes.value.data && blogRes.value.data.length > 0) {
+        setBlogs(
+          blogRes.value.data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            slug: item.slug,
+            category: item.category || "Mẹo hay",
+            thumbnail: item.thumbnail,
+            summary: item.summary,
+            content: item.content || "",
+            sections: item.sections || [],
+            author: item.author || "Chị Mai Kim Tuyến",
+            isPublished: item.is_published ?? true,
+            createdAt: item.created_at
+              ? new Date(item.created_at).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0],
+          }))
+        );
+      } else {
+        setBlogs(INITIAL_BLOGS);
+      }
+
+      // 4. Process Orders
+      if (orderRes.status === "fulfilled" && orderRes.value.data) {
+        setOrders(
+          orderRes.value.data.map((item: any) => ({
+            id: item.id,
+            orderCode: item.order_code,
+            customerName: item.customer_name,
+            customerPhone: item.customer_phone,
+            customerAddress: item.customer_address,
+            customerNote: item.customer_note,
+            totalAmount: Number(item.total_amount),
+            paymentMethod: item.payment_method,
+            paymentStatus: item.payment_status,
+            items: item.items || [],
+            payosCheckoutUrl: item.payos_checkout_url,
+            payosQrCodeUrl: item.payos_qr_code_url,
+            createdAt: item.created_at,
+            paidAt: item.paid_at,
+          }))
+        );
+      }
+
+      setIsLoading(false);
+    }).catch(() => {
+      if (isMounted) {
+        setProducts(INITIAL_PRODUCTS);
+        setCategories(INITIAL_CATEGORIES);
+        setBlogs(INITIAL_BLOGS);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Derived featured products sorted by displayOrder
@@ -566,6 +567,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <StoreContext.Provider
       value={{
+        isLoading,
         products,
         categories,
         blogs,

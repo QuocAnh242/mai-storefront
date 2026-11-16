@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { Loading, StatCardSkeleton, TableRowsSkeleton } from '@/components/ui/Loading';
 import {
   TrendingUp,
   DollarSign,
@@ -29,6 +30,7 @@ interface ManualRevenue {
 export default function AdminDoanhThuPage() {
   const { orders } = useStore();
   const [manualRevenues, setManualRevenues] = useState<ManualRevenue[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form State
@@ -45,6 +47,7 @@ export default function AdminDoanhThuPage() {
   useEffect(() => {
     const loadRevenues = async () => {
       try {
+        setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           const res = await fetch('/api/auth/session');
@@ -55,30 +58,32 @@ export default function AdminDoanhThuPage() {
             }
           }
         }
+
+        const { data, error } = await supabase
+          .from('manual_revenues')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error('Failed to load manual revenues:', error);
+          return;
+        }
+        if (data) {
+          setManualRevenues(
+            data.map((item: any) => ({
+              id: item.id,
+              amount: Number(item.amount),
+              date: item.date,
+              source: item.source,
+              note: item.note || '',
+              createdAt: item.created_at,
+            }))
+          );
+        }
       } catch (err) {
         console.warn('Session sync notice:', err);
-      }
-
-      const { data, error } = await supabase
-        .from('manual_revenues')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('Failed to load manual revenues:', error);
-        return;
-      }
-      if (data) {
-        setManualRevenues(
-          data.map((item: any) => ({
-            id: item.id,
-            amount: Number(item.amount),
-            date: item.date,
-            source: item.source,
-            note: item.note || '',
-            createdAt: item.created_at,
-          }))
-        );
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -188,7 +193,15 @@ export default function AdminDoanhThuPage() {
       </div>
 
       {/* Summary KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCardSkeleton title={`Tổng Doanh Thu (${selectedMonth})`} />
+          <StatCardSkeleton title="Doanh Thu Đơn Web" />
+          <StatCardSkeleton title="Doanh Thu Bán Tại Kho" />
+          <StatCardSkeleton title="Tỷ Lệ Bán Online" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Monthly Revenue */}
         <div className="bg-gradient-to-br from-sky-950 to-sky-900 text-white p-5 rounded-2xl shadow-md space-y-3">
           <div className="flex items-center justify-between">
@@ -269,6 +282,7 @@ export default function AdminDoanhThuPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Main Content Layout: 2 Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -287,7 +301,12 @@ export default function AdminDoanhThuPage() {
             </button>
           </div>
 
-          {monthManualRevenues.length > 0 ? (
+          {loading ? (
+            <div className="space-y-4 py-4">
+              <Loading size="sm" text="Đang tải nhật ký thu tiền..." />
+              <TableRowsSkeleton rows={4} />
+            </div>
+          ) : monthManualRevenues.length > 0 ? (
             <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
               {monthManualRevenues.map((rev) => (
                 <div

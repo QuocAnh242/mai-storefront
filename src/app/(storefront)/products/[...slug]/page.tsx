@@ -8,6 +8,7 @@ import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
 import { ProductCard } from '@/features/products/ProductCard';
 import { findProductBySlugOrId } from '@/lib/productUrl';
 import { ProductReviews } from '@/features/products/ProductReviews';
+import { Loading } from '@/components/ui/Loading';
 import {
   ShoppingBag,
   ShieldCheck,
@@ -24,7 +25,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const slugParam = params?.slug;
 
-  const { products } = useStore();
+  const { products, isLoading } = useStore();
 
   // Find product by id, number, category/number, or legacy slug
   const product = findProductBySlugOrId(products, slugParam as string | string[]);
@@ -54,6 +55,32 @@ export default function ProductDetailPage() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
+  // 1. Loading UI state when data is being fetched
+  if (isLoading && !product) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-8 py-8">
+        <div className="py-12 flex justify-center">
+          <Loading
+            size="lg"
+            text="Đang tải sản phẩm..."
+            subtext="Đang đồng bộ chi tiết sản phẩm và bảng giá mới nhất"
+          />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
+          <div className="lg:col-span-6 aspect-square bg-slate-100 rounded-3xl" />
+          <div className="lg:col-span-6 space-y-4">
+            <div className="h-4 bg-slate-200 rounded w-1/4" />
+            <div className="h-8 bg-slate-200 rounded w-3/4" />
+            <div className="h-6 bg-slate-200 rounded w-1/3" />
+            <div className="h-32 bg-slate-100 rounded-2xl" />
+            <div className="h-12 bg-slate-200 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Only show Not Found if loading finished and product does not exist
   if (!product) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 space-y-4">

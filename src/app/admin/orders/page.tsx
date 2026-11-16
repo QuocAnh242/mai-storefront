@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
 import { ShoppingBag, CheckCircle, Clock, Phone, MapPin, QrCode, Trash2 } from 'lucide-react';
+import { Loading, TableRowsSkeleton } from '@/components/ui/Loading';
 
 export default function AdminDonHangPage() {
-  const { orders, updateOrderStatus, deleteOrder } = useStore();
+  const { orders, updateOrderStatus, deleteOrder, isLoading } = useStore();
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -55,7 +56,16 @@ export default function AdminDonHangPage() {
         </div>
       </div>
 
-      {orders.length > 0 ? (
+      {isLoading && orders.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-8 space-y-6">
+          <Loading
+            size="md"
+            text="Đang tải danh sách đơn hàng..."
+            subtext="Đang kết nối dữ liệu đơn hàng và trạng thái thanh toán"
+          />
+          <TableRowsSkeleton rows={5} />
+        </div>
+      ) : orders.length > 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700">

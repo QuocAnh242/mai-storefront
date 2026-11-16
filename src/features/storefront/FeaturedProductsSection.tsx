@@ -3,9 +3,10 @@
 import React, { useRef, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
 import { ProductCard } from '../products/ProductCard';
+import { Loading, ProductGridSkeleton } from '@/components/ui/Loading';
 
 export function FeaturedProductsSection() {
-  const { products, featuredProducts, selectedCategory, setSelectedCategory, searchQuery, categories } = useStore();
+  const { products, featuredProducts, selectedCategory, setSelectedCategory, searchQuery, categories, isLoading } = useStore();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -92,6 +93,21 @@ export function FeaturedProductsSection() {
       !adhesiveCategoryIds.includes(p.categoryId) &&
       !shoePolishCategoryIds.includes(p.categoryId)
   );
+
+  if (isLoading && products.length === 0) {
+    return (
+      <div id="danh-sach-san-pham" className="space-y-8 py-6">
+        <div className="py-6 flex justify-center">
+          <Loading
+            size="lg"
+            text="Đang tải danh sách sản phẩm..."
+            subtext="Đang kết nối kho hàng và đồng bộ danh mục"
+          />
+        </div>
+        <ProductGridSkeleton count={8} />
+      </div>
+    );
+  }
 
   return (
     <div id="danh-sach-san-pham" className="space-y-12 py-4">

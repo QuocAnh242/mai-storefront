@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
 import { slugify } from '@/lib/slugify';
 import { Category } from '@/shared/types';
+import { Loading } from '@/components/ui/Loading';
 
 export default function AdminDanhMucPage() {
-  const { categories, products, addCategory, updateCategory, deleteCategory } = useStore();
+  const { categories, products, addCategory, updateCategory, deleteCategory, isLoading } = useStore();
 
   // Create form state
   const [newCatName, setNewCatName] = useState('');
@@ -191,7 +192,15 @@ export default function AdminDanhMucPage() {
 
       {/* Category List Cards (10 per page) */}
       <div className="space-y-3">
-        {paginatedCategories.length === 0 ? (
+        {isLoading && categories.length === 0 ? (
+          <div className="bg-white p-8 rounded-lg border border-slate-200">
+            <Loading
+              size="md"
+              text="Đang tải danh mục hàng hóa..."
+              subtext="Đang kết nối hệ thống phân loại sản phẩm"
+            />
+          </div>
+        ) : paginatedCategories.length === 0 ? (
           <div className="bg-white p-8 rounded-lg border border-slate-200 text-center text-slate-400 text-xs">
             Không tìm thấy danh mục nào phù hợp.
           </div>

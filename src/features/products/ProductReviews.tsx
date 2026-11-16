@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { ProductReview } from '@/shared/types';
+import { Loading, ReviewSkeleton } from '@/components/ui/Loading';
 
 interface ProductReviewsProps {
   productId: string;
@@ -318,9 +319,19 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             <button
               type="submit"
               disabled={submitting}
-              className="bg-sky-950 hover:bg-sky-900 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+              className="bg-sky-950 hover:bg-sky-900 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-2"
             >
-              {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+              {submitting ? (
+                <>
+                  <svg className="animate-spin w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Đang gửi...</span>
+                </>
+              ) : (
+                'Gửi đánh giá'
+              )}
             </button>
           </div>
         </form>
@@ -375,9 +386,19 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
                 type="button"
                 onClick={handleConfirmSubmit}
                 disabled={submitting}
-                className="bg-sky-950 hover:bg-sky-900 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                className="bg-sky-950 hover:bg-sky-900 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-2"
               >
-                {submitting ? 'Đang gửi...' : 'Xác nhận & Gửi ngay'}
+                {submitting ? (
+                  <>
+                    <svg className="animate-spin w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Đang gửi...</span>
+                  </>
+                ) : (
+                  'Xác nhận & Gửi ngay'
+                )}
               </button>
             </div>
           </div>
@@ -387,8 +408,12 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
       {/* ─── DANH SÁCH ĐÁNH GIÁ & PHẢN HỒI TỪ CỬA HÀNG ─── */}
       <div className="space-y-3">
         {loading ? (
-          <div className="p-8 text-center text-xs text-slate-400 font-medium">
-            Đang tải nhận xét...
+          <div className="space-y-3">
+            <Loading size="sm" text="Đang tải nhận xét..." />
+            <div className="divide-y divide-slate-100 bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <ReviewSkeleton />
+              <ReviewSkeleton />
+            </div>
           </div>
         ) : reviews.length === 0 ? (
           <div className="bg-slate-50/70 p-8 rounded-2xl border border-dashed border-slate-200 text-center space-y-2">
