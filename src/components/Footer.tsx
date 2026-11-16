@@ -233,6 +233,22 @@ export function Footer() {
               <h4 className="text-xs font-bold text-white uppercase tracking-[0.15em] mb-1">Liên Hệ</h4>
               
               <div className="space-y-3 text-xs text-sky-200/80 w-full max-w-sm sm:max-w-none">
+                {/* 2 Công ty (Không ghi chữ đối tác) */}
+                <div className="space-y-1.5 text-left pb-1 border-b border-sky-900/60">
+                  <div className="flex items-start justify-center sm:justify-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-1.5"></span>
+                    <span className="font-semibold text-white text-xs leading-snug">
+                      Công Ty Sản Xuất Thương Mại Xuất Nhập Khẩu Bột Màu Ba Biển
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-center sm:justify-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-1.5"></span>
+                    <span className="font-semibold text-white text-xs leading-snug">
+                      Công Ty Sản Xuất Thương Mại Bột Màu HMCO
+                    </span>
+                  </div>
+                </div>
+
                 {/* Address */}
                 <div className="flex items-start justify-center sm:justify-start gap-2.5 text-left">
                   <MapPin className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
@@ -282,21 +298,6 @@ export function Footer() {
               </div>
             </div>
 
-          </div>
-        </div>
-
-        {/* Doanh Nghiệp (Không gắn nhãn đối tác, phong cách phẳng tối giản) */}
-        <div className="border-t border-sky-900/60 bg-sky-950/60 py-3.5 px-4 sm:px-8">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-8 text-center text-xs text-sky-200/90 font-medium">
-            <div className="flex items-center justify-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0"></span>
-              <span>Công Ty Sản Xuất Thương Mại Xuất Nhập Khẩu Bột Màu Ba Biển</span>
-            </div>
-            <span className="hidden md:inline text-sky-800">|</span>
-            <div className="flex items-center justify-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0"></span>
-              <span>Công Ty Sản Xuất Thương Mại Bột Màu HMCO</span>
-            </div>
           </div>
         </div>
 
