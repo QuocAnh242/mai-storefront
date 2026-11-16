@@ -79,8 +79,17 @@ export default function AdminLoginPage() {
       </div>
 
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded-xl">
-          {errorMsg}
+        <div className={`p-3.5 rounded-xl text-xs font-semibold border ${
+          errorMsg.includes('quá nhanh') || errorMsg.includes('nhiều lần')
+            ? 'bg-amber-50 border-amber-200 text-amber-800'
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <p className="font-bold">{errorMsg}</p>
+          {errorMsg.includes('không chính xác') && (
+            <p className="text-[11px] text-red-600 mt-1 font-normal">
+              💡 Hãy bấm vào icon con mắt bên dưới để kiểm tra mật khẩu đã nhập, tránh bị bộ gõ tiếng Việt (Unikey/EVKey) tự động thêm dấu.
+            </p>
+          )}
         </div>
       )}
 
@@ -101,7 +110,10 @@ export default function AdminLoginPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu (*)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-semibold text-slate-700">Mật khẩu (*)</label>
+            <span className="text-[10px] text-slate-400">Kiểm tra Unikey trước khi gõ</span>
+          </div>
           <div className="relative">
             <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

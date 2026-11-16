@@ -15,6 +15,7 @@ import {
   X,
   LayoutDashboard,
   Users,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronLeft,
@@ -37,6 +38,7 @@ export function AdminSidebar() {
     { href: '/admin/categories', label: 'Quản Lý Danh Mục', icon: Layers },
     { href: '/admin/revenue', label: 'Doanh Thu & Báo Cáo', icon: TrendingUp },
     { href: '/admin/orders', label: 'Quản Lý Đơn Hàng', icon: ShoppingBag },
+    { href: '/admin/reviews', label: 'Quản Lý Đánh Giá', icon: MessageSquare },
     { href: '/admin/news', label: 'Bài Viết / Blog', icon: Newspaper },
     { href: '/admin/accounts', label: 'Quản Lý Tài Khoản', icon: Users },
   ];

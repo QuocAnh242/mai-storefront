@@ -7,6 +7,7 @@ import { useStore } from '@/shared/context/StoreContext';
 import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
 import { ProductCard } from '@/features/products/ProductCard';
 import { findProductBySlugOrId } from '@/lib/productUrl';
+import { ProductReviews } from '@/features/products/ProductReviews';
 import {
   ShoppingBag,
   ShieldCheck,
@@ -214,6 +215,16 @@ export default function ProductDetailPage() {
               <span className="font-bold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">
                 Quy cách: {product.unit}
               </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('product-reviews-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="font-bold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                Đánh giá khách hàng
+              </button>
             </div>
 
             {/* Clean High-Visibility Price Card */}
@@ -395,7 +406,7 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Section 3: Shipping & Return Policy */}
+        {/* Section 2: Shipping & Return Policy */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
           <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2">
             Chính Sách Chành Xe &amp; Đổi Trả
@@ -421,6 +432,26 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ─── KHỐI ĐÁNH GIÁ & PHẢN HỒI KHÁCH HÀNG (DIV RIÊNG BIỆT Ở DƯỚI) ─── */}
+      <div
+        id="product-reviews-section"
+        className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-8 space-y-6 scroll-mt-6"
+      >
+        <div className="border-b border-slate-100 pb-4">
+          <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">
+            Đánh Giá &amp; Cảm Nhận Của Khách Hàng
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Đánh giá và cảm nhận thực tế từ khách hàng đã mua sản phẩm này
+          </p>
+        </div>
+
+        <ProductReviews
+          productId={product.id || product.slug}
+          productTitle={product.title}
+        />
       </div>
 
       {/* ─── Related Products Section (1 product per row on mobile) ─── */}

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 export function AnalyticsTracker() {
   const pathname = usePathname();
@@ -9,7 +9,11 @@ export function AnalyticsTracker() {
 
   useEffect(() => {
     // Only track storefront user routes (skip admin and api routes)
-    if (!pathname || pathname.startsWith('/admin') || pathname.startsWith('/api')) {
+    if (
+      !pathname ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/api")
+    ) {
       return;
     }
 
@@ -20,11 +24,11 @@ export function AnalyticsTracker() {
 
     // Send tracking hit asynchronously with keepalive
     try {
-      fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: 'pageview',
+          type: "pageview",
           path: pathname,
         }),
         keepalive: true,

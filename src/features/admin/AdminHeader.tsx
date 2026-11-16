@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, Package, Layers, ShoppingBag, Newspaper, ExternalLink, LogOut } from 'lucide-react';
+import { Sparkles, Package, Layers, ShoppingBag, Newspaper, MessageSquare, ExternalLink, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export function AdminHeader() {
@@ -14,6 +14,7 @@ export function AdminHeader() {
     { href: '/admin/products', label: 'Quản Lý Sản Phẩm', icon: Package },
     { href: '/admin/categories', label: 'Quản Lý Danh Mục', icon: Layers },
     { href: '/admin/orders', label: 'Quản Lý Đơn Hàng', icon: ShoppingBag },
+    { href: '/admin/reviews', label: 'Quản Lý Đánh Giá', icon: MessageSquare },
     { href: '/admin/news', label: 'Bài Viết / Blog', icon: Newspaper },
   ];
 

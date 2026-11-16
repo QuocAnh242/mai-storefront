@@ -65,6 +65,19 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
         return;
       }
 
+      // Establish Client-Side Supabase Session for RLS queries
+      if (data.session) {
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        } catch (clientErr) {
+          console.warn('Client auth sync notice:', clientErr);
+        }
+      }
+
       // Successful JWT Login
       showToast('Đăng nhập thành công! Chào mừng Quản trị viên', 'success');
       onClose();
@@ -111,8 +124,17 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
         </div>
 
         {errorMsg && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded-xl">
-            {errorMsg}
+          <div className={`p-3.5 rounded-xl text-xs font-semibold border ${
+            errorMsg.includes('quá nhanh') || errorMsg.includes('nhiều lần')
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-red-50 border-red-200 text-red-700'
+          }`}>
+            <p className="font-bold">{errorMsg}</p>
+            {errorMsg.includes('không chính xác') && (
+              <p className="text-[11px] text-red-600 mt-1 font-normal">
+                💡 Kiểm tra lại phím Caps Lock hoặc tắt bộ gõ tiếng Việt (Unikey/EVKey) khi gõ mật khẩu.
+              </p>
+            )}
           </div>
         )}
 

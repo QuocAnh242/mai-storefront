@@ -1,38 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
-import { getLiveAnalyticsSummary } from '@/lib/analyticsStore';
-import { checkRateLimit } from '@/lib/rateLimit';
+import { NextRequest, NextResponse } from "next/server";
+import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import { getLiveAnalyticsSummary } from "@/lib/analyticsStore";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(req: NextRequest) {
   try {
     // 0. IP Rate Limiting: Max 60 requests per minute per IP
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
     const rateLimit = checkRateLimit(`analytics_${clientIp}`, 60, 60);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: 'RATE_LIMIT_EXCEEDED', message: 'Quá nhiều yêu cầu tải dữ liệu thống kê' },
-        { status: 429 }
+        {
+          error: "RATE_LIMIT_EXCEEDED",
+          message: "Quá nhiều yêu cầu tải dữ liệu thống kê",
+        },
+        { status: 429 },
       );
     }
 
     // 1. Admin Authentication Check
-    const token = req.cookies.get('sb-access-token')?.value;
+    const token = req.cookies.get("sb-access-token")?.value;
     if (!token) {
-      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     if (isSupabaseConfigured()) {
-      const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+      const { data: authData, error: authErr } =
+        await supabase.auth.getUser(token);
       if (authErr || !authData?.user) {
-        return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
       }
     }
 
     let todayViews = 0;
     let todayVisitors = 0;
     let totalTrackedViews = 0;
-    let trends: { date: string; label: string; views: number; visitors: number }[] = [];
+    let trends: {
+      date: string;
+      label: string;
+      views: number;
+      visitors: number;
+    }[] = [];
     let topProducts: { id: string; title: string; views: number }[] = [];
     let dbConnected = false;
     let requiresTableSetup = false;
@@ -46,24 +56,29 @@ export async function GET(req: NextRequest) {
 
         // A. Count today's pageviews and distinct visitors
         const { data: todayViewsData, error: pvErr } = await dbClient
-          .from('site_pageviews')
-          .select('visitor_id')
-          .gte('created_at', todayStart.toISOString());
+          .from("site_pageviews")
+          .select("visitor_id")
+          .gte("created_at", todayStart.toISOString());
 
         if (pvErr) {
           // If table does not exist in schema cache
-          if (pvErr.message?.includes('schema cache') || pvErr.message?.includes('does not exist')) {
+          if (
+            pvErr.message?.includes("schema cache") ||
+            pvErr.message?.includes("does not exist")
+          ) {
             requiresTableSetup = true;
           }
         } else if (todayViewsData) {
           dbConnected = true;
           todayViews = todayViewsData.length;
-          todayVisitors = new Set(todayViewsData.map((r: any) => r.visitor_id).filter(Boolean)).size;
+          todayVisitors = new Set(
+            todayViewsData.map((r: any) => r.visitor_id).filter(Boolean),
+          ).size;
 
           // B. Total pageviews all time
           const { count: totalCount } = await dbClient
-            .from('site_pageviews')
-            .select('*', { count: 'exact', head: true });
+            .from("site_pageviews")
+            .select("*", { count: "exact", head: true });
           totalTrackedViews = totalCount || todayViews;
 
           // C. 7-day trend
@@ -72,14 +87,18 @@ export async function GET(req: NextRequest) {
           sevenDaysAgo.setHours(0, 0, 0, 0);
 
           const { data: trendData } = await dbClient
-            .from('site_pageviews')
-            .select('visitor_id, created_at')
-            .gte('created_at', sevenDaysAgo.toISOString())
-            .order('created_at', { ascending: true });
+            .from("site_pageviews")
+            .select("visitor_id, created_at")
+            .gte("created_at", sevenDaysAgo.toISOString())
+            .order("created_at", { ascending: true });
 
-          const trendsMap: { [dateStr: string]: { views: number; visitors: Set<string> } } = {};
+          const trendsMap: {
+            [dateStr: string]: { views: number; visitors: Set<string> };
+          } = {};
           (trendData || []).forEach((row: any) => {
-            const dateStr = new Date(row.created_at).toISOString().split('T')[0];
+            const dateStr = new Date(row.created_at)
+              .toISOString()
+              .split("T")[0];
             if (!trendsMap[dateStr]) {
               trendsMap[dateStr] = { views: 0, visitors: new Set() };
             }
@@ -92,7 +111,7 @@ export async function GET(req: NextRequest) {
           for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            const dateKey = d.toISOString().split('T')[0];
+            const dateKey = d.toISOString().split("T")[0];
             const dayLabel = `${d.getDate()}/${d.getMonth() + 1}`;
             const entry = trendsMap[dateKey];
             trends.push({
@@ -105,17 +124,19 @@ export async function GET(req: NextRequest) {
 
           // D. Top viewed products
           const { data: prodViews } = await dbClient
-            .from('product_views')
-            .select('product_id, product_title')
+            .from("product_views")
+            .select("product_id, product_title")
             .limit(500);
 
           if (prodViews && prodViews.length > 0) {
-            const counts: { [id: string]: { id: string; title: string; views: number } } = {};
+            const counts: {
+              [id: string]: { id: string; title: string; views: number };
+            } = {};
             prodViews.forEach((row: any) => {
               if (!counts[row.product_id]) {
                 counts[row.product_id] = {
                   id: row.product_id,
-                  title: row.product_title || 'Sản phẩm',
+                  title: row.product_title || "Sản phẩm",
                   views: 0,
                 };
               }
@@ -127,7 +148,7 @@ export async function GET(req: NextRequest) {
           }
         }
       } catch (dbQueryErr) {
-        console.warn('Analytics DB read note:', dbQueryErr);
+        console.warn("Analytics DB read note:", dbQueryErr);
       }
     }
 

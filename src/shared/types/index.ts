@@ -132,3 +132,15 @@ export interface StoreSettings {
   bankAccountNumber: string;
   bankName: string;
 }
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  authorName: string;
+  rating: number; // 1 - 5
+  content: string;
+  createdAt: string;
+  isApproved?: boolean;
+  replyContent?: string;
+  repliedAt?: string;
+}

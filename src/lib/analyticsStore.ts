@@ -8,7 +8,14 @@ interface LiveVisitorStats {
   todayViews: number;
   todayVisitors: Set<string>;
   dailyTrends: { [dateStr: string]: { views: number; visitors: Set<string> } };
-  productViews: { [productId: string]: { id: string; title: string; views: number; lastViewedAt: number } };
+  productViews: {
+    [productId: string]: {
+      id: string;
+      title: string;
+      views: number;
+      lastViewedAt: number;
+    };
+  };
 }
 
 // Transient in-memory state for active process
@@ -19,9 +26,13 @@ const globalStore: LiveVisitorStats = {
   productViews: {},
 };
 
-export function recordPageView(path: string, visitorId: string, _referrer?: string) {
+export function recordPageView(
+  path: string,
+  visitorId: string,
+  _referrer?: string,
+) {
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
+  const dateStr = now.toISOString().split("T")[0];
 
   globalStore.todayViews += 1;
   globalStore.todayVisitors.add(visitorId);
@@ -33,13 +44,17 @@ export function recordPageView(path: string, visitorId: string, _referrer?: stri
   globalStore.dailyTrends[dateStr].visitors.add(visitorId);
 }
 
-export function recordProductView(productId: string, productTitle: string, visitorId: string) {
+export function recordProductView(
+  productId: string,
+  productTitle: string,
+  visitorId: string,
+) {
   recordPageView(`/products/${productId}`, visitorId);
 
   if (!globalStore.productViews[productId]) {
     globalStore.productViews[productId] = {
       id: productId,
-      title: productTitle || 'Sản phẩm',
+      title: productTitle || "Sản phẩm",
       views: 0,
       lastViewedAt: Date.now(),
     };
@@ -60,15 +75,23 @@ export function clearAnalyticsStore() {
 }
 
 export function getLiveAnalyticsSummary() {
-  const today = new Date().toISOString().split('T')[0];
-  const todayData = globalStore.dailyTrends[today] || { views: 0, visitors: new Set() };
+  const today = new Date().toISOString().split("T")[0];
+  const todayData = globalStore.dailyTrends[today] || {
+    views: 0,
+    visitors: new Set(),
+  };
 
   // Last 7 days trend
-  const trends: { date: string; label: string; views: number; visitors: number }[] = [];
+  const trends: {
+    date: string;
+    label: string;
+    views: number;
+    visitors: number;
+  }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateKey = d.toISOString().split('T')[0];
+    const dateKey = d.toISOString().split("T")[0];
     const dayLabel = `${d.getDate()}/${d.getMonth() + 1}`;
     const entry = globalStore.dailyTrends[dateKey];
     trends.push({
