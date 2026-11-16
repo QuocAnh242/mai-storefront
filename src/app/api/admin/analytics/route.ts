@@ -75,11 +75,26 @@ export async function GET(req: NextRequest) {
             todayViewsData.map((r: any) => r.visitor_id).filter(Boolean),
           ).size;
 
-          // B. Total pageviews all time
+          // B. Total pageviews all time (cộng dồn cả lượt xem đã lưu trữ sau các đợt dọn dẹp 30 ngày)
           const { count: totalCount } = await dbClient
             .from("site_pageviews")
             .select("*", { count: "exact", head: true });
-          totalTrackedViews = totalCount || todayViews;
+
+          let archivedCount = 0;
+          try {
+            const { data: archiveRow } = await dbClient
+              .from("analytics_archive")
+              .select("archived_pageviews")
+              .eq("id", "global")
+              .maybeSingle();
+            if (archiveRow?.archived_pageviews) {
+              archivedCount = Number(archiveRow.archived_pageviews);
+            }
+          } catch {
+            archivedCount = 0;
+          }
+
+          totalTrackedViews = (totalCount || todayViews) + archivedCount;
 
           // C. 7-day trend
           const sevenDaysAgo = new Date();
