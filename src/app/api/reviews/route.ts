@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, supabaseAdmin, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { sanitizeText } from '@/lib/sanitizer';
 import { moderateReviewContent } from '@/lib/aiModeration';
@@ -158,29 +158,60 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
-      .from('product_reviews')
-      .insert({
-        product_id: productId,
-        author_name: cleanAuthor,
-        rating,
-        content: cleanContent,
-        is_approved: moderation.isApproved, // Tự động duyệt nếu an toàn, tự động ẩn nếu độc hại/chửi thề
-      })
-      .select()
-      .single();
+    const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
+    let insertedData: any = null;
 
-    if (error) {
-      if (error.code === 'PGRST205' || error.message.includes('not find the table')) {
-        return NextResponse.json(
-          {
-            error: 'TABLE_NOT_FOUND',
-            message: 'Bảng đánh giá chưa được khởi tạo trong Supabase. Vui lòng chạy file setup_reviews.sql trên Supabase SQL Editor.',
-          },
-          { status: 500 }
-        );
+    if (moderation.isApproved || isSupabaseAdminConfigured()) {
+      const { data, error } = await client
+        .from('product_reviews')
+        .insert({
+          product_id: productId,
+          author_name: cleanAuthor,
+          rating,
+          content: cleanContent,
+          is_approved: moderation.isApproved, // Tự động duyệt nếu an toàn, tự động ẩn nếu độc hại/chửi thề
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message.includes('not find the table')) {
+          return NextResponse.json(
+            {
+              error: 'TABLE_NOT_FOUND',
+              message: 'Bảng đánh giá chưa được khởi tạo trong Supabase. Vui lòng chạy file setup_reviews.sql trên Supabase SQL Editor.',
+            },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      insertedData = data;
+    } else {
+      // Khi chỉ có anon key và is_approved = false (chờ duyệt):
+      // Không gọi .select().single() để tránh xung đột với policy RLS của PostgreSQL
+      const { error } = await client
+        .from('product_reviews')
+        .insert({
+          product_id: productId,
+          author_name: cleanAuthor,
+          rating,
+          content: cleanContent,
+          is_approved: false,
+        });
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message.includes('not find the table')) {
+          return NextResponse.json(
+            {
+              error: 'TABLE_NOT_FOUND',
+              message: 'Bảng đánh giá chưa được khởi tạo trong Supabase. Vui lòng chạy file setup_reviews.sql trên Supabase SQL Editor.',
+            },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
     }
 
     // Thông báo thân thiện cho khách hàng
@@ -192,14 +223,14 @@ export async function POST(req: NextRequest) {
       success: true,
       message: successMsg,
       isApproved: moderation.isApproved,
-      data: moderation.isApproved
+      data: moderation.isApproved && insertedData
         ? {
-            id: data.id,
-            productId: data.product_id,
-            authorName: data.author_name,
-            rating: data.rating,
-            content: data.content,
-            createdAt: data.created_at,
+            id: insertedData.id,
+            productId: insertedData.product_id,
+            authorName: insertedData.author_name,
+            rating: insertedData.rating,
+            content: insertedData.content,
+            createdAt: insertedData.created_at,
           }
         : null, // Không trả về payload cho client render nếu chưa được duyệt
     });

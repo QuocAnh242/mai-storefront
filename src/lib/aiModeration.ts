@@ -81,11 +81,13 @@ YÊU CẦU TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON (KHÔNG KÈM MARKDOWN HO
   "reason": "Giải thích ngắn gọn lý do bằng tiếng Việt"
 }`;
 
+    // Sử dụng AbortSignal timeout 3.5s để bảo vệ API không bị treo khi mạng chậm hoặc Google quá tải
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(3500),
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
@@ -103,7 +105,13 @@ YÊU CẦU TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON (KHÔNG KÈM MARKDOWN HO
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) return null;
 
-    const parsed = JSON.parse(rawText);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      return null;
+    }
+
     return {
       isSafe: Boolean(parsed.isSafe),
       toxicityScore: Number(parsed.toxicityScore) || 0,

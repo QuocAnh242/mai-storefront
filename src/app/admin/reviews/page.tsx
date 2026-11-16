@@ -47,17 +47,27 @@ export default function AdminReviewsPage() {
   const [deletingReview, setDeletingReview] = useState<ProductReview | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
 
+  // Helper an toàn đọc JSON tránh lỗi unexpected end of data
+  const safeJson = async (res: Response) => {
+    try {
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // Tải danh sách reviews
   const loadReviews = async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/admin/reviews');
-      const json = await res.json();
-      if (res.ok && json.success) {
+      const json = await safeJson(res);
+      if (res.ok && json?.success) {
         setReviews(json.data || []);
         if (json.stats) setStats(json.stats);
       } else {
-        showToast(json.error || 'Không thể tải danh sách đánh giá', 'error');
+        showToast(json?.error || 'Không thể tải danh sách đánh giá', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Lỗi tải đánh giá', 'error');
@@ -102,9 +112,9 @@ export default function AdminReviewsPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        showToast(json.error || 'Không thể gửi phản hồi', 'error');
+      const json = await safeJson(res);
+      if (!res.ok || !json?.success) {
+        showToast(json?.error || 'Không thể gửi phản hồi', 'error');
         return;
       }
 
@@ -142,9 +152,9 @@ export default function AdminReviewsPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        showToast(json.error || 'Không thể sửa đánh giá', 'error');
+      const json = await safeJson(res);
+      if (!res.ok || !json?.success) {
+        showToast(json?.error || 'Không thể sửa đánh giá', 'error');
         return;
       }
 
@@ -172,9 +182,9 @@ export default function AdminReviewsPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        showToast(json.error || 'Không thể cập nhật trạng thái', 'error');
+      const json = await safeJson(res);
+      if (!res.ok || !json?.success) {
+        showToast(json?.error || 'Không thể cập nhật trạng thái', 'error');
         return;
       }
 
@@ -195,9 +205,9 @@ export default function AdminReviewsPage() {
         method: 'DELETE',
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        showToast(json.error || 'Không thể xóa đánh giá', 'error');
+      const json = await safeJson(res);
+      if (!res.ok || !json?.success) {
+        showToast(json?.error || 'Không thể xóa đánh giá', 'error');
         return;
       }
 

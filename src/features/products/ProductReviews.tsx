@@ -32,11 +32,18 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
       setLoading(true);
       const res = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`);
       if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setReviews(json.data || []);
-          if (json.stats) {
-            setStats(json.stats);
+        const text = await res.text();
+        if (text) {
+          try {
+            const json = JSON.parse(text);
+            if (json.success) {
+              setReviews(json.data || []);
+              if (json.stats) {
+                setStats(json.stats);
+              }
+            }
+          } catch (e) {
+            console.warn('Lỗi phân tích dữ liệu đánh giá:', e);
           }
         }
       }
@@ -98,22 +105,30 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         }),
       });
 
-      const json = await res.json();
+      const text = await res.text();
+      let json: any = null;
+      if (text) {
+        try {
+          json = JSON.parse(text);
+        } catch {
+          // phản hồi không phải dạng json (ví dụ timeout hoặc lỗi server)
+        }
+      }
 
-      if (!res.ok || !json.success) {
+      if (!res.ok || !json?.success) {
         setNotice({
           type: 'error',
-          message: json.message || 'Không thể gửi đánh giá, vui lòng thử lại sau',
+          message: json?.message || 'Không thể gửi đánh giá lúc này. Vui lòng thử lại sau giây lát!',
         });
         return;
       }
 
       setNotice({
         type: 'success',
-        message: 'Cảm ơn bạn đã gửi đánh giá! Nhận xét đã được ghi nhận thành công.',
+        message: json.message || 'Cảm ơn bạn đã gửi đánh giá! Nhận xét đã được ghi nhận thành công.',
       });
 
-      // Thêm review mới vào danh sách
+      // Thêm review mới vào danh sách nếu được hiển thị công khai ngay
       if (json.data) {
         const newReviews = [json.data, ...reviews];
         setReviews(newReviews);
@@ -130,7 +145,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
     } catch (err: any) {
       setNotice({
         type: 'error',
-        message: err.message || 'Lỗi kết nối khi gửi đánh giá',
+        message: 'Lỗi đường truyền kết nối đến máy chủ. Vui lòng thử lại sau ít phút!',
       });
     } finally {
       setSubmitting(false);
