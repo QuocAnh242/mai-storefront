@@ -233,20 +233,10 @@ export function Footer() {
               <h4 className="text-xs font-bold text-white uppercase tracking-[0.15em] mb-1">Liên Hệ</h4>
               
               <div className="space-y-3 text-xs text-sky-200/80 w-full max-w-sm sm:max-w-none">
-                {/* 2 Công ty (Không ghi chữ đối tác) */}
-                <div className="space-y-1.5 text-left pb-1 border-b border-sky-900/60">
-                  <div className="flex items-start justify-center sm:justify-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-1.5"></span>
-                    <span className="font-semibold text-white text-xs leading-snug">
-                      Công Ty Sản Xuất Thương Mại Xuất Nhập Khẩu Bột Màu Ba Biển
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-center sm:justify-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-1.5"></span>
-                    <span className="font-semibold text-white text-xs leading-snug">
-                      Công Ty Sản Xuất Thương Mại Bột Màu HMCO
-                    </span>
-                  </div>
+                {/* 2 dòng thông tin công ty - Thiết kế clean, phẳng, cùng phong cách typography */}
+                <div className="space-y-1 text-sky-200/70 text-xs leading-relaxed">
+                  <p>Công Ty Sản Xuất Thương Mại Xuất Nhập Khẩu Bột Màu Ba Biển</p>
+                  <p>Công Ty Sản Xuất Thương Mại Bột Màu HMCO</p>
                 </div>
 
                 {/* Address */}
