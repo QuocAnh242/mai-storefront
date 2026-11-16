@@ -18,24 +18,17 @@ export function AnalyticsTracker() {
     }
     lastTrackedPath.current = pathname;
 
-    // Send tracking hit asynchronously without blocking user navigation
+    // Send tracking hit asynchronously with keepalive
     try {
-      const payload = JSON.stringify({
-        type: 'pageview',
-        path: pathname,
-      });
-
-      if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
-        const blob = new Blob([payload], { type: 'application/json' });
-        navigator.sendBeacon('/api/track', blob);
-      } else {
-        fetch('/api/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload,
-          keepalive: true,
-        }).catch(() => {});
-      }
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'pageview',
+          path: pathname,
+        }),
+        keepalive: true,
+      }).catch(() => {});
     } catch {
       // Ignore client network tracking errors
     }
@@ -43,4 +36,3 @@ export function AnalyticsTracker() {
 
   return null;
 }
-

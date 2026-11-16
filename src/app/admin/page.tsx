@@ -12,6 +12,7 @@ interface AnalyticsData {
   totalTrackedViews: number;
   trends: { date: string; label: string; views: number; visitors: number }[];
   topProducts: { id: string; title: string; views: number }[];
+  requiresTableSetup?: boolean;
 }
 
 export default function AdminDashboardPage() {
@@ -192,6 +193,22 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {analytics?.requiresTableSetup && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-amber-950">Chưa tạo bảng thống kê trên Supabase</div>
+            <div className="text-xs text-amber-800 mt-0.5">
+              Để lưu trữ lượt xem vĩnh viễn trên Supabase thay vì bộ nhớ tạm thời, vui lòng mở <strong>Supabase Dashboard &gt; SQL Editor</strong> và chạy tệp <code className="font-mono bg-amber-100 text-amber-900 px-1 py-0.5 rounded">supabase/setup_analytics.sql</code>.
+            </div>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="inline-block text-[11px] font-semibold bg-amber-200 text-amber-900 px-2.5 py-1 rounded">
+              supabase/setup_analytics.sql
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 2. KPI Cards - Clean & Flat Numbers, Zero Icons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
