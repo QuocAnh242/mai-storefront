@@ -285,6 +285,21 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Doanh Nghiệp (Không gắn nhãn đối tác, phong cách phẳng tối giản) */}
+        <div className="border-t border-sky-900/60 bg-sky-950/60 py-3.5 px-4 sm:px-8">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-8 text-center text-xs text-sky-200/90 font-medium">
+            <div className="flex items-center justify-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0"></span>
+              <span>Công Ty Sản Xuất Thương Mại Xuất Nhập Khẩu Bột Màu Ba Biển</span>
+            </div>
+            <span className="hidden md:inline text-sky-800">|</span>
+            <div className="flex items-center justify-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0"></span>
+              <span>Công Ty Sản Xuất Thương Mại Bột Màu HMCO</span>
+            </div>
+          </div>
+        </div>
+
         {/* Copyright Bar */}
         <div className="border-t border-sky-900/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-5 flex flex-col sm:flex-row justify-between items-center gap-2.5 text-center">
