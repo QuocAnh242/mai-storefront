@@ -33,6 +33,14 @@ export default function AdminReviewsPage() {
   const [ratingFilter, setRatingFilter] = useState<'all' | '5' | '4' | '3' | '2' | '1'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unreplied' | 'replied' | 'hidden'>('all');
 
+  // Phân trang (Pagination)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, ratingFilter, statusFilter, itemsPerPage]);
+
   // Modals state
   const [replyingReview, setReplyingReview] = useState<ProductReview | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -246,6 +254,24 @@ export default function AdminReviewsPage() {
     return true;
   });
 
+  // Tính toán phân trang
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedReviews = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+  const getPageNumbers = (current: number, total: number): (number | string)[] => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 3) {
+      return [1, 2, 3, 4, '...', total];
+    }
+    if (current >= total - 2) {
+      return [1, '...', total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
+
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -354,7 +380,7 @@ export default function AdminReviewsPage() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {filtered.map((r) => {
+            {paginatedReviews.map((r) => {
               const prodTitle = getProductTitle(r.productId);
               const prodSlug = getProductSlug(r.productId);
               const isHidden = r.isApproved === false;
@@ -500,6 +526,73 @@ export default function AdminReviewsPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ─── Pagination Footer (Flat & Clean) ─── */}
+        {!loading && filtered.length > 0 && (
+          <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div className="flex items-center gap-3">
+              <span>
+                Hiển thị <strong>{Math.min(startIndex + 1, filtered.length)}</strong> - <strong>{Math.min(startIndex + itemsPerPage, filtered.length)}</strong> trên tổng số <strong>{filtered.length}</strong> đánh giá
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span>/ trang:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold cursor-pointer outline-none text-xs"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-700 font-medium cursor-pointer transition-colors"
+                >
+                  Trước
+                </button>
+
+                {getPageNumbers(currentPage, totalPages).map((item, idx) =>
+                  typeof item === 'number' ? (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCurrentPage(item)}
+                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        currentPage === item
+                          ? 'bg-sky-950 text-white shadow-2xs font-bold'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span key={idx} className="w-5 text-center text-slate-400">
+                      ...
+                    </span>
+                  )
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-700 font-medium cursor-pointer transition-colors"
+                >
+                  Sau
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
