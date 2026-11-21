@@ -205,8 +205,119 @@ export default function AdminSanPhamPage() {
           </div>
         </div>
 
-        {/* Product Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile View: Product Cards (< 640px) */}
+        <div className="block sm:hidden space-y-3">
+          {isLoading && products.length === 0 ? (
+            <div className="p-6 bg-slate-50 rounded-xl text-center">
+              <Loading
+                size="md"
+                text="Đang tải danh sách sản phẩm..."
+                subtext="Đang kết nối cơ sở dữ liệu kho hàng"
+              />
+            </div>
+          ) : paginatedProducts.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl text-xs">
+              Không tìm thấy sản phẩm nào phù hợp.
+            </div>
+          ) : (
+            paginatedProducts.map((product) => (
+              <div
+                key={product.id}
+                className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3"
+              >
+                <div className="flex items-start gap-3">
+                  <img
+                    src={product.images[0] || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=100'}
+                    alt=""
+                    className="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0 bg-white"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={getProductUrl(product)}
+                      target="_blank"
+                      className="font-bold text-slate-900 text-xs hover:text-sky-700 block line-clamp-2"
+                    >
+                      {product.title}
+                    </Link>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      <span className="text-[10px] text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 font-medium">
+                        {product.categoryName}
+                      </span>
+                      {product.isFeatured && (
+                        <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                          Nổi bật
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Giá bán / {product.unit}</span>
+                    <span className="font-extrabold text-sky-900">
+                      {product.isContactPrice || product.price <= 1 ? (
+                        <span className="text-[11px] font-bold text-sky-700">Liên hệ</span>
+                      ) : (
+                        formatVND(product.price)
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateProduct(product.id, { inStock: !product.inStock })}
+                      className={`font-semibold px-2.5 py-1 rounded text-[10px] transition-colors cursor-pointer ${
+                        product.inStock
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-red-100 text-red-800 border border-red-300'
+                      }`}
+                    >
+                      {product.inStock ? 'Còn hàng' : 'Hết hàng'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateProduct(product.id, { isFeatured: !product.isFeatured })}
+                      className={`px-2 py-1 rounded text-[10px] font-semibold border transition-colors cursor-pointer ${
+                        product.isFeatured
+                          ? 'bg-amber-100 border-amber-300 text-amber-900'
+                          : 'bg-white border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {product.isFeatured ? '★ Nổi bật' : '+ Nổi bật'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+                  <button
+                    onClick={() => {
+                      setEditingProduct(product);
+                      setIsModalOpen(true);
+                    }}
+                    className="flex-1 py-2 text-center rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Chỉnh sửa
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Xóa vĩnh viễn sản phẩm "${product.title}"?`)) {
+                        deleteProduct(product.id);
+                      }
+                    }}
+                    className="px-4 py-2 text-center rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Product Table (>= 640px) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
               <tr>

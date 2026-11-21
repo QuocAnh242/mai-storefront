@@ -2,16 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
+import { useToast } from '@/shared/context/ToastContext';
 import { slugify } from '@/lib/slugify';
 import { Category } from '@/shared/types';
 import { Loading } from '@/components/ui/Loading';
 
 export default function AdminDanhMucPage() {
   const { categories, products, addCategory, updateCategory, deleteCategory, isLoading } = useStore();
+  const { showToast } = useToast();
 
   // Create form state
   const [newCatName, setNewCatName] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   // Subcategory add state
   const [activeCatForSub, setActiveCatForSub] = useState<string | null>(null);
@@ -33,20 +36,27 @@ export default function AdminDanhMucPage() {
     setCurrentPage(1);
   }, [searchQuery, itemsPerPage]);
 
-  const handleCreateCategory = (e: React.FormEvent) => {
+  const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCatName.trim()) return;
+    if (!newCatName.trim()) {
+      showToast('Vui lòng nhập tên danh mục', 'error');
+      return;
+    }
 
+    setIsCreating(true);
     const trimmedName = newCatName.trim();
-    addCategory({
+    const res = await addCategory({
       name: trimmedName,
       slug: slugify(trimmedName),
       description: newCatDesc.trim(),
       subcategories: [],
     });
+    setIsCreating(false);
 
-    setNewCatName('');
-    setNewCatDesc('');
+    if (res.success) {
+      setNewCatName('');
+      setNewCatDesc('');
+    }
   };
 
   const handleStartEdit = (cat: Category) => {
@@ -55,17 +65,22 @@ export default function AdminDanhMucPage() {
     setEditDesc(cat.description || '');
   };
 
-  const handleSaveEdit = (catId: string) => {
-    if (!editName.trim()) return;
-    updateCategory(catId, {
+  const handleSaveEdit = async (catId: string) => {
+    if (!editName.trim()) {
+      showToast('Tên danh mục không được để trống', 'error');
+      return;
+    }
+    const res = await updateCategory(catId, {
       name: editName.trim(),
       slug: slugify(editName.trim()),
       description: editDesc.trim(),
     });
-    setEditingCatId(null);
+    if (res.success) {
+      setEditingCatId(null);
+    }
   };
 
-  const handleAddSubcategory = (categoryId: string) => {
+  const handleAddSubcategory = async (categoryId: string) => {
     if (!subCatName.trim()) return;
 
     const targetCategory = categories.find((c) => c.id === categoryId);
@@ -81,21 +96,23 @@ export default function AdminDanhMucPage() {
 
     const updatedSubcategories = [...(targetCategory.subcategories || []), newSub];
 
-    updateCategory(categoryId, {
+    const res = await updateCategory(categoryId, {
       subcategories: updatedSubcategories,
     });
 
-    setSubCatName('');
-    setActiveCatForSub(null);
+    if (res.success) {
+      setSubCatName('');
+      setActiveCatForSub(null);
+    }
   };
 
-  const handleDeleteSubcategory = (categoryId: string, subId: string) => {
+  const handleDeleteSubcategory = async (categoryId: string, subId: string) => {
     const targetCategory = categories.find((c) => c.id === categoryId);
     if (!targetCategory) return;
 
     const updatedSubcategories = (targetCategory.subcategories || []).filter((s) => s.id !== subId);
 
-    updateCategory(categoryId, {
+    await updateCategory(categoryId, {
       subcategories: updatedSubcategories,
     });
   };
@@ -168,9 +185,10 @@ export default function AdminDanhMucPage() {
         <div className="flex justify-end pt-1">
           <button
             type="submit"
-            className="bg-sky-700 hover:bg-sky-800 text-white font-semibold text-xs px-4 py-2 rounded transition-colors cursor-pointer"
+            disabled={isCreating}
+            className="bg-sky-700 hover:bg-sky-800 disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded transition-colors cursor-pointer"
           >
-            Lưu danh mục
+            {isCreating ? 'Đang lưu...' : 'Lưu danh mục'}
           </button>
         </div>
       </form>

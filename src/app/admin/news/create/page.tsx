@@ -9,9 +9,11 @@ export default function CreateBlogPostPage() {
   const router = useRouter();
   const { addBlogPost } = useStore();
 
-  const handleSave = (postPayload: any) => {
-    addBlogPost(postPayload);
-    router.push('/admin/news');
+  const handleSave = async (postPayload: any) => {
+    const res = await addBlogPost(postPayload);
+    if (res.success) {
+      router.push('/admin/news');
+    }
   };
 
   return (

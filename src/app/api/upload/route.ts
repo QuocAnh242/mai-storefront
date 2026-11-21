@@ -30,8 +30,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    let file: File | null = null;
+    try {
+      const formData = await req.formData();
+      file = formData.get("file") as File | null;
+    } catch {
+      return NextResponse.json({ error: "Dữ liệu upload không hợp lệ (cần multipart/form-data)" }, { status: 400 });
+    }
 
     if (!file) {
       return NextResponse.json({ error: "Không có file ảnh" }, { status: 400 });

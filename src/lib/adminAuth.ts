@@ -21,14 +21,23 @@ export async function verifyAdminAuth(req: NextRequest): Promise<AdminAuthResult
   const refreshToken = req.cookies.get('sb-refresh-token')?.value;
   const loggedInCookie = req.cookies.get('mkt_admin_logged_in')?.value;
 
+  // Hỗ trợ kiểm tra Authorization: Bearer <token> từ client fetch
+  const authHeader = req.headers.get('authorization');
+  let bearerToken: string | undefined = undefined;
+  if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+    bearerToken = authHeader.substring(7).trim();
+  }
+
+  const tokenToVerify = accessToken || bearerToken;
+
   if (!isSupabaseConfigured()) {
     return { authorized: true };
   }
 
-  // 1. Thử xác thực trực tiếp bằng access token
-  if (accessToken) {
+  // 1. Thử xác thực trực tiếp bằng access token hoặc bearer token
+  if (tokenToVerify) {
     try {
-      const { data, error } = await supabase.auth.getUser(accessToken);
+      const { data, error } = await supabase.auth.getUser(tokenToVerify);
       if (!error && data?.user) {
         return { authorized: true };
       }

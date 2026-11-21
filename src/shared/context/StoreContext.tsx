@@ -9,6 +9,7 @@ import {
   INITIAL_STORE_SETTINGS,
 } from "../constants/initialData";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { useToast } from "@/shared/context/ToastContext";
 
 interface StoreContextType {
   isLoading: boolean;
@@ -24,19 +25,19 @@ interface StoreContextType {
   setSearchQuery: (query: string) => void;
 
   // Actions
-  addProduct: (product: Omit<Product, "id" | "createdAt">) => void;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  addProduct: (product: Omit<Product, "id" | "createdAt">) => Promise<{ success: boolean; error?: string; data?: Product }>;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<{ success: boolean; error?: string }>;
+  deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
   clearAllProducts: () => void;
   reorderFeaturedProducts: (reorderedList: Product[]) => void;
 
-  addCategory: (category: Omit<Category, "id">) => void;
-  updateCategory: (id: string, category: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
+  addCategory: (category: Omit<Category, "id">) => Promise<{ success: boolean; error?: string; data?: Category }>;
+  updateCategory: (id: string, category: Partial<Category>) => Promise<{ success: boolean; error?: string }>;
+  deleteCategory: (id: string) => Promise<{ success: boolean; error?: string }>;
 
-  addBlogPost: (blog: Omit<BlogPost, "id" | "createdAt">) => void;
-  updateBlogPost: (id: string, blog: Partial<BlogPost>) => void;
-  deleteBlogPost: (id: string) => void;
+  addBlogPost: (blog: Omit<BlogPost, "id" | "createdAt">) => Promise<{ success: boolean; error?: string; data?: BlogPost }>;
+  updateBlogPost: (id: string, blog: Partial<BlogPost>) => Promise<{ success: boolean; error?: string }>;
+  deleteBlogPost: (id: string) => Promise<{ success: boolean; error?: string }>;
 
   createOrder: (
     order: Omit<Order, "id" | "createdAt" | "orderCode">,
@@ -53,6 +54,7 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,6 +63,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [settings] = useState<StoreSettings>(INITIAL_STORE_SETTINGS);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Helper lấy headers có kèm Authorization token nếu client đã đăng nhập
+  const getAuthHeaders = async () => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.access_token) {
+        headers["Authorization"] = `Bearer ${data.session.access_token}`;
+      }
+    } catch {}
+    return headers;
+  };
 
   // Helper to ensure authenticated Supabase session on client for RLS operations
   const ensureAuthSession = async () => {
@@ -245,84 +259,109 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
   // ── Product Actions ──────────────────────────────────────────────────────────
-  const addProduct = async (newProd: Omit<Product, "id" | "createdAt">) => {
-    const tempId = `p-${Date.now()}`;
-    const product: Product = {
-      ...newProd,
-      id: tempId,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setProducts((prev) => [product, ...prev]);
-
+  const addProduct = async (
+    newProd: Omit<Product, "id" | "createdAt">
+  ): Promise<{ success: boolean; error?: string; data?: Product }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch("/api/admin/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(newProd),
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          const created: Product = {
-            id: json.data.id,
-            title: json.data.title,
-            slug: json.data.slug,
-            price: Number(json.data.price),
-            originalPrice: json.data.original_price ? Number(json.data.original_price) : undefined,
-            isContactPrice: Boolean(Number(json.data.price) <= 1),
-            unit: json.data.unit,
-            description: json.data.description,
-            categoryId: json.data.category_id,
-            categoryName: json.data.category_name,
-            subcategoryId: json.data.subcategory_id,
-            subcategoryName: json.data.subcategory_name,
-            images: json.data.images || [],
-            isFeatured: json.data.is_featured,
-            displayOrder: json.data.display_order || 0,
-            inStock: json.data.in_stock,
-            specs: json.data.specs || {},
-            createdAt: json.data.created_at,
-          };
-          setProducts((prev) => prev.map((p) => (p.id === tempId ? created : p)));
-        }
-      } else {
-        console.error("❌ Add product failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Thêm sản phẩm thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Add product error:", err);
+
+      const item = json.data;
+      const created: Product = {
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        price: Number(item.price),
+        originalPrice: item.original_price ? Number(item.original_price) : undefined,
+        isContactPrice: Boolean(item.is_contact_price || Number(item.price) <= 1),
+        unit: item.unit,
+        description: item.description,
+        categoryId: item.category_id,
+        categoryName: item.category_name,
+        subcategoryId: item.subcategory_id,
+        subcategoryName: item.subcategory_name,
+        images: item.images || [],
+        isFeatured: item.is_featured,
+        displayOrder: item.display_order || 0,
+        inStock: item.in_stock,
+        specs: item.specs || {},
+        createdAt: item.created_at,
+      };
+
+      setProducts((prev) => [created, ...prev]);
+      showToast(`Đã thêm sản phẩm "${created.title}" thành công!`, "success");
+      return { success: true, data: created };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi thêm sản phẩm";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
-  const updateProduct = async (id: string, updatedFields: Partial<Product>) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p)),
-    );
-
+  const updateProduct = async (
+    id: string,
+    updatedFields: Partial<Product>
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch("/api/admin/products", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ id, ...updatedFields }),
       });
-      if (!res.ok) {
-        console.error("❌ Update product failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Cập nhật sản phẩm thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Update product error:", err);
+
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
+      );
+      showToast("Cập nhật sản phẩm thành công!", "success");
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi cập nhật sản phẩm";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
-  const deleteProduct = async (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/products?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
+        headers,
       });
-      if (!res.ok) {
-        console.error("❌ Delete product failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Xóa sản phẩm thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Delete product error:", err);
+
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      showToast("Đã xóa sản phẩm thành công!", "success");
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi xóa sản phẩm";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
@@ -352,135 +391,195 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── Category Actions ─────────────────────────────────────────────────────────
-  const addCategory = async (cat: Omit<Category, "id">) => {
-    const tempId = `cat-${Date.now()}`;
-    const category: Category = { ...cat, id: tempId };
-    setCategories((prev) => [...prev, category]);
-
+  const addCategory = async (
+    cat: Omit<Category, "id">
+  ): Promise<{ success: boolean; error?: string; data?: Category }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch("/api/admin/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(cat),
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          setCategories((prev) =>
-            prev.map((c) =>
-              c.id === tempId
-                ? {
-                    ...c,
-                    id: json.data.id,
-                    name: json.data.name,
-                    slug: json.data.slug,
-                    description: json.data.description,
-                  }
-                : c
-            )
-          );
-        }
-      } else {
-        console.error("❌ Add category failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Tạo danh mục thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Add category error:", err);
+
+      const createdCat: Category = {
+        id: json.data.id,
+        name: json.data.name,
+        slug: json.data.slug,
+        description: json.data.description,
+        subcategories: cat.subcategories || [],
+      };
+
+      setCategories((prev) => [...prev, createdCat]);
+      showToast(`Đã tạo danh mục "${createdCat.name}" thành công!`, "success");
+      return { success: true, data: createdCat };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi tạo danh mục";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
-  const updateCategory = async (id: string, cat: Partial<Category>) => {
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...cat } : c)),
-    );
-
+  const updateCategory = async (
+    id: string,
+    cat: Partial<Category>
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch("/api/admin/categories", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ id, ...cat }),
       });
-      if (!res.ok) {
-        console.error("❌ Update category failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Cập nhật danh mục thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Update category error:", err);
+
+      setCategories((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, ...cat } : c))
+      );
+      showToast("Cập nhật danh mục thành công!", "success");
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi cập nhật danh mục";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
-  const deleteCategory = async (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
-
+  const deleteCategory = async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
+        headers,
       });
-      if (!res.ok) {
-        console.error("❌ Delete category failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Xóa danh mục thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Delete category error:", err);
+
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      showToast("Đã xóa danh mục thành công!", "success");
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi xóa danh mục";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
   // ── Blog Actions ─────────────────────────────────────────────────────────────
-  const addBlogPost = async (blog: Omit<BlogPost, "id" | "createdAt">) => {
-    const tempId = `blog-${Date.now()}`;
-    const post: BlogPost = {
-      ...blog,
-      id: tempId,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setBlogs((prev) => [post, ...prev]);
-
+  const addBlogPost = async (
+    blog: Omit<BlogPost, "id" | "createdAt">
+  ): Promise<{ success: boolean; error?: string; data?: BlogPost }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch("/api/admin/blogs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(blog),
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          setBlogs((prev) =>
-            prev.map((b) => (b.id === tempId ? { ...b, id: json.data.id } : b))
-          );
-        }
-      } else {
-        console.error("❌ Add blog failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Tạo bài viết thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Add blog error:", err);
+
+      const item = json.data;
+      const created: BlogPost = {
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        category: item.category || "Mẹo hay",
+        thumbnail: item.thumbnail,
+        summary: item.summary,
+        content: item.content || "",
+        sections: item.sections || [],
+        author: item.author || "Chị Mai Kim Tuyến",
+        isPublished: item.is_published ?? true,
+        createdAt: item.created_at
+          ? new Date(item.created_at).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
+      };
+
+      setBlogs((prev) => [created, ...prev]);
+      showToast(`Đã tạo bài viết "${created.title}" thành công!`, "success");
+      return { success: true, data: created };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi tạo bài viết";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
-  const updateBlogPost = async (id: string, blog: Partial<BlogPost>) => {
-    setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...blog } : b)));
-
+  const updateBlogPost = async (
+    id: string,
+    blog: Partial<BlogPost>
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch("/api/admin/blogs", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ id, ...blog }),
       });
-      if (!res.ok) {
-        console.error("❌ Update blog failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Cập nhật bài viết thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Update blog error:", err);
+
+      setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...blog } : b)));
+      showToast("Cập nhật bài viết thành công!", "success");
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi cập nhật bài viết";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 
-  const deleteBlogPost = async (id: string) => {
-    setBlogs((prev) => prev.filter((b) => b.id !== id));
+  const deleteBlogPost = async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/blogs?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
+        headers,
       });
-      if (!res.ok) {
-        console.error("❌ Delete blog failed:", await res.text());
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        const errorMsg = json?.error || json?.message || "Xóa bài viết thất bại";
+        showToast(errorMsg, "error");
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
-      console.error("❌ Delete blog error:", err);
+
+      setBlogs((prev) => prev.filter((b) => b.id !== id));
+      showToast("Đã xóa bài viết thành công!", "success");
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Lỗi kết nối khi xóa bài viết";
+      showToast(errorMsg, "error");
+      return { success: false, error: errorMsg };
     }
   };
 

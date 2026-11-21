@@ -103,8 +103,10 @@ export default function AdminTinTucPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm('Xóa bài viết này khỏi hệ thống?')) deleteBlogPost(post.id);
+                      onClick={async () => {
+                        if (confirm('Xóa bài viết này khỏi hệ thống?')) {
+                          await deleteBlogPost(post.id);
+                        }
                       }}
                       className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 cursor-pointer"
                       title="Xóa bài viết"

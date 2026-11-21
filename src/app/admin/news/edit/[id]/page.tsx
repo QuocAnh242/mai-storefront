@@ -28,9 +28,11 @@ export default function EditBlogPostPage() {
     );
   }
 
-  const handleSave = (postPayload: any) => {
-    updateBlogPost(id, postPayload);
-    router.push('/admin/news');
+  const handleSave = async (postPayload: any) => {
+    const res = await updateBlogPost(id, postPayload);
+    if (res.success) {
+      router.push('/admin/news');
+    }
   };
 
   return (

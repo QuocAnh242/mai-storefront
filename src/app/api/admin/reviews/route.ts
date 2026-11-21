@@ -97,6 +97,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Thiếu review ID' }, { status: 400 });
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'ID đánh giá không hợp lệ (cần định dạng UUID)' }, { status: 400 });
+    }
+
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
 
     // 1. Phản hồi khách hàng (Reply)
@@ -114,10 +119,14 @@ export async function PATCH(req: NextRequest) {
         })
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json({ error: 'Không tìm thấy đánh giá' }, { status: 404 });
       }
 
       const response = NextResponse.json({
@@ -142,10 +151,14 @@ export async function PATCH(req: NextRequest) {
         .update(updatePayload)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json({ error: 'Không tìm thấy đánh giá' }, { status: 404 });
       }
 
       const response = NextResponse.json({
@@ -164,10 +177,14 @@ export async function PATCH(req: NextRequest) {
         .update({ is_approved: Boolean(isApproved) })
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json({ error: 'Không tìm thấy đánh giá' }, { status: 404 });
       }
 
       const response = NextResponse.json({
@@ -197,6 +214,11 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: 'Thiếu ID đánh giá cần xóa' }, { status: 400 });
+    }
+
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'ID đánh giá không hợp lệ (cần định dạng UUID)' }, { status: 400 });
     }
 
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/shared/context/StoreContext';
+import { useToast } from '@/shared/context/ToastContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Loading, StatCardSkeleton, TableRowsSkeleton } from '@/components/ui/Loading';
 import {
@@ -29,6 +30,7 @@ interface ManualRevenue {
 
 export default function AdminDoanhThuPage() {
   const { orders } = useStore();
+  const { showToast } = useToast();
   const [manualRevenues, setManualRevenues] = useState<ManualRevenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,98 +45,77 @@ export default function AdminDoanhThuPage() {
   const currentYearMonth = new Date().toISOString().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState<string>(currentYearMonth);
 
-  // Load manual revenues from Supabase
-  useEffect(() => {
-    const loadRevenues = async () => {
-      try {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          const res = await fetch('/api/auth/session');
-          if (res.ok) {
-            const authData = await res.json();
-            if (authData?.session?.access_token) {
-              await supabase.auth.setSession(authData.session);
-            }
-          }
+  // Load manual revenues from API
+  const loadRevenues = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/revenue');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setManualRevenues(json.data);
         }
-
-        const { data, error } = await supabase
-          .from('manual_revenues')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (error) {
-          console.error('Failed to load manual revenues:', error);
-          return;
-        }
-        if (data) {
-          setManualRevenues(
-            data.map((item: any) => ({
-              id: item.id,
-              amount: Number(item.amount),
-              date: item.date,
-              source: item.source,
-              note: item.note || '',
-              createdAt: item.created_at,
-            }))
-          );
-        }
-      } catch (err) {
-        console.warn('Session sync notice:', err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.warn('Revenue fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadRevenues();
   }, []);
 
   const handleAddManualRevenue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0 || !date) {
-      alert('Vui lòng nhập số tiền hợp lệ và ngày ghi nhận!');
+      showToast('Vui lòng nhập số tiền hợp lệ và ngày ghi nhận!', 'error');
       return;
     }
 
-    const newRev: ManualRevenue = {
-      id: `rev-${Date.now()}`,
-      amount: Number(amount),
-      date,
-      source: source.trim() || 'Bán tại kho',
-      note: note.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save to Supabase
-    const { error } = await supabase.from('manual_revenues').insert([{
-      id: newRev.id,
-      amount: newRev.amount,
-      date: newRev.date,
-      source: newRev.source,
-      note: newRev.note,
-    }]);
-    if (error) {
-      alert('Lưu thất bại: ' + error.message);
-      return;
+    try {
+      const res = await fetch('/api/admin/revenue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(amount),
+          date,
+          source: source.trim() || 'Bán tại kho',
+          note: note.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        showToast(json.error || 'Lưu thất bại', 'error');
+        return;
+      }
+      setAmount(0);
+      setNote('');
+      setIsModalOpen(false);
+      showToast('Đã ghi nhận doanh thu thành công!', 'success');
+      loadRevenues();
+    } catch (err: any) {
+      showToast('Lỗi: ' + err.message, 'error');
     }
-
-    setManualRevenues((prev) => [newRev, ...prev]);
-    setAmount(0);
-    setNote('');
-    setIsModalOpen(false);
   };
 
   const handleDeleteManualRevenue = async (id: string) => {
     if (!confirm('Xóa bản ghi doanh thu này?')) return;
-
-    const { error } = await supabase.from('manual_revenues').delete().eq('id', id);
-    if (error) {
-      alert('Xóa thất bại: ' + error.message);
-      return;
+    try {
+      const res = await fetch(`/api/admin/revenue?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setManualRevenues((prev) => prev.filter((r) => r.id !== id));
+        showToast('Đã xóa bản ghi doanh thu thành công', 'success');
+      } else {
+        const json = await res.json();
+        showToast(json.error || 'Xóa thất bại', 'error');
+      }
+    } catch (err: any) {
+      showToast('Lỗi: ' + err.message, 'error');
     }
-
-    setManualRevenues((prev) => prev.filter((r) => r.id !== id));
   };
 
   const formatVND = (num: number) => {

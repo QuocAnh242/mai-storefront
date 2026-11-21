@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Product } from '@/shared/types';
 import { useStore } from '@/shared/context/StoreContext';
+import { useToast } from '@/shared/context/ToastContext';
 import { slugify } from '@/lib/slugify';
-import { X, Save, Upload } from 'lucide-react';
+import { X, Save, Upload, Loader2 } from 'lucide-react';
 
 interface ProductFormModalProps {
   editingProduct: Product | null;
@@ -14,6 +15,8 @@ interface ProductFormModalProps {
 
 export function ProductFormModal({ editingProduct, onClose }: ProductFormModalProps) {
   const { categories, addProduct, updateProduct } = useStore();
+  const { showToast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState<number>(0);
@@ -119,15 +122,15 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !categoryId) {
-      alert('Vui lòng nhập Tên sản phẩm và Chọn danh mục!');
+      showToast('Vui lòng nhập Tên sản phẩm và Chọn danh mục!', 'error');
       return;
     }
 
     if (!isContactPrice && (price === undefined || price <= 0)) {
-      alert('Vui lòng nhập Giá bán hợp lệ hoặc tích chọn "Giá Liên Hệ"!');
+      showToast('Vui lòng nhập Giá bán hợp lệ hoặc tích chọn "Giá Liên Hệ"!', 'error');
       return;
     }
 
@@ -157,13 +160,18 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
       inStock,
     };
 
-    if (editingProduct) {
-      updateProduct(editingProduct.id, productPayload);
-    } else {
-      addProduct(productPayload);
-    }
+    setIsSaving(true);
+    try {
+      const res = editingProduct
+        ? await updateProduct(editingProduct.id, productPayload)
+        : await addProduct(productPayload);
 
-    onClose();
+      if (res.success) {
+        onClose();
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return createPortal(
@@ -481,16 +489,27 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
             <button
               type="button"
               onClick={onClose}
-              className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer"
+              disabled={isSaving}
+              className="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-800 font-bold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="bg-sky-800 hover:bg-sky-900 text-white font-bold text-xs px-6 py-3 rounded-xl transition-colors flex items-center gap-2 cursor-pointer shadow-md"
+              disabled={isSaving}
+              className="bg-sky-800 hover:bg-sky-900 disabled:opacity-50 text-white font-bold text-xs px-6 py-3 rounded-xl transition-colors flex items-center gap-2 cursor-pointer shadow-md"
             >
-              <Save className="w-4 h-4" />
-              <span>{editingProduct ? 'Cập Nhật' : 'Lưu Sản Phẩm'}</span>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Đang lưu...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>{editingProduct ? 'Cập Nhật' : 'Lưu Sản Phẩm'}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

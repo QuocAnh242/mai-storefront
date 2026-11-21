@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/shared/context/StoreContext';
+import { useToast } from '@/shared/context/ToastContext';
 import { slugify } from '@/lib/slugify';
 import { getProductUrl } from '@/lib/productUrl';
 import { Loading, StatCardSkeleton, ChartSkeleton } from '@/components/ui/Loading';
@@ -18,12 +19,14 @@ interface AnalyticsData {
 
 export default function AdminDashboardPage() {
   const { products, categories, orders, addProduct } = useStore();
+  const { showToast } = useToast();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
   // Quick Add Product Modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [quickTitle, setQuickTitle] = useState('');
   const [quickPrice, setQuickPrice] = useState<number>(0);
   const [quickCategory, setQuickCategory] = useState(categories[0]?.id || '');
@@ -125,17 +128,18 @@ export default function AdminDashboardPage() {
     .map((p, idx) => (idx === 0 ? `M ${p.x} ${p.yVisitors}` : `L ${p.x} ${p.yVisitors}`))
     .join(' ');
 
-  const handleCreateQuickProduct = (e: React.FormEvent) => {
+  const handleCreateQuickProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickTitle.trim() || quickPrice <= 0) {
-      alert('Vui lòng nhập tên và giá bán hợp lệ');
+      showToast('Vui lòng nhập tên và giá bán hợp lệ', 'error');
       return;
     }
 
     const selectedCatObj = categories.find((c) => c.id === quickCategory) || categories[0];
     const finalImage = quickImage.trim() || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80';
 
-    addProduct({
+    setIsQuickAdding(true);
+    const res = await addProduct({
       title: quickTitle.trim(),
       slug: slugify(quickTitle.trim()),
       price: Number(quickPrice),
@@ -148,12 +152,15 @@ export default function AdminDashboardPage() {
       displayOrder: 99,
       inStock: true,
     });
+    setIsQuickAdding(false);
 
-    setQuickTitle('');
-    setQuickPrice(0);
-    setQuickUnit('Kg');
-    setQuickImage('');
-    setIsQuickAddOpen(false);
+    if (res.success) {
+      setQuickTitle('');
+      setQuickPrice(0);
+      setQuickUnit('Kg');
+      setQuickImage('');
+      setIsQuickAddOpen(false);
+    }
   };
 
   return (
@@ -791,16 +798,18 @@ export default function AdminDashboardPage() {
               <div className="pt-2 border-t border-slate-200 flex justify-end gap-2">
                 <button
                   type="button"
+                  disabled={isQuickAdding}
                   onClick={() => setIsQuickAddOpen(false)}
-                  className="px-3 py-1.5 rounded text-slate-600 hover:bg-slate-100 text-xs font-medium cursor-pointer"
+                  className="px-3 py-1.5 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50 text-xs font-medium cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded bg-sky-700 hover:bg-sky-800 text-white text-xs font-semibold cursor-pointer"
+                  disabled={isQuickAdding}
+                  className="px-4 py-1.5 rounded bg-sky-700 hover:bg-sky-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer"
                 >
-                  Lưu sản phẩm
+                  {isQuickAdding ? 'Đang lưu...' : 'Lưu sản phẩm'}
                 </button>
               </div>
             </form>

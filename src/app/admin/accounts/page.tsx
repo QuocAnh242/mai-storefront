@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Loading, TableRowsSkeleton } from "@/components/ui/Loading";
+import { useToast } from "@/shared/context/ToastContext";
 
 interface Account {
   id: string;
@@ -13,6 +14,7 @@ interface Account {
 }
 
 export default function AdminAccountsPage() {
+  const { showToast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [requiresServiceRole, setRequiresServiceRole] = useState(false);
@@ -67,15 +69,15 @@ export default function AdminAccountsPage() {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail.trim() || !newEmail.includes("@")) {
-      alert("Vui lòng nhập địa chỉ email hợp lệ");
+      showToast("Vui lòng nhập địa chỉ email hợp lệ", "error");
       return;
     }
     if (newPassword.length < 6) {
-      alert("Mật khẩu khởi tạo phải từ 6 ký tự trở lên");
+      showToast("Mật khẩu khởi tạo phải từ 6 ký tự trở lên", "error");
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert("Mật khẩu xác nhận không trùng khớp");
+      showToast("Mật khẩu xác nhận không trùng khớp", "error");
       return;
     }
 
@@ -93,11 +95,11 @@ export default function AdminAccountsPage() {
 
       const json = await res.json();
       if (!res.ok) {
-        alert(json.error || "Không thể tạo tài khoản");
+        showToast(json.error || "Không thể tạo tài khoản", "error");
         return;
       }
 
-      alert("Đã tạo tài khoản quản trị thành công trên Supabase Auth!");
+      showToast("Đã tạo tài khoản quản trị thành công trên Supabase Auth!", "success");
       setNewEmail("");
       setNewName("");
       setNewPassword("");
@@ -105,7 +107,7 @@ export default function AdminAccountsPage() {
       setIsCreateModalOpen(false);
       loadAccounts();
     } catch (err: any) {
-      alert("Lỗi tạo tài khoản: " + err.message);
+      showToast("Lỗi tạo tài khoản: " + err.message, "error");
     } finally {
       setCreateSubmitting(false);
     }
@@ -116,11 +118,11 @@ export default function AdminAccountsPage() {
     e.preventDefault();
     if (!selectedAccount) return;
     if (changePasswordVal.length < 6) {
-      alert("Mật khẩu mới phải từ 6 ký tự trở lên");
+      showToast("Mật khẩu mới phải từ 6 ký tự trở lên", "error");
       return;
     }
     if (changePasswordVal !== changeConfirmVal) {
-      alert("Mật khẩu xác nhận không trùng khớp");
+      showToast("Mật khẩu xác nhận không trùng khớp", "error");
       return;
     }
 
@@ -138,19 +140,20 @@ export default function AdminAccountsPage() {
 
       const json = await res.json();
       if (!res.ok) {
-        alert(json.error || "Không thể đổi mật khẩu");
+        showToast(json.error || "Không thể đổi mật khẩu", "error");
         return;
       }
 
-      alert(
-        `Đã đổi mật khẩu cho tài khoản "${selectedAccount.email}" thành công trên Supabase Auth!`,
+      showToast(
+        `Đã đổi mật khẩu cho tài khoản "${selectedAccount.email}" thành công!`,
+        "success"
       );
       setIsPasswordModalOpen(false);
       setSelectedAccount(null);
       setChangePasswordVal("");
       setChangeConfirmVal("");
     } catch (err: any) {
-      alert("Lỗi đổi mật khẩu: " + err.message);
+      showToast("Lỗi đổi mật khẩu: " + err.message, "error");
     } finally {
       setPasswordSubmitting(false);
     }
@@ -169,13 +172,14 @@ export default function AdminAccountsPage() {
 
       const json = await res.json();
       if (!res.ok) {
-        alert(json.error || "Không thể xóa tài khoản");
+        showToast(json.error || "Không thể xóa tài khoản", "error");
         return;
       }
 
+      showToast(`Đã xóa tài khoản "${acc.email}" thành công`, "success");
       loadAccounts();
     } catch (err: any) {
-      alert("Lỗi xóa tài khoản: " + err.message);
+      showToast("Lỗi xóa tài khoản: " + err.message, "error");
     }
   };
 

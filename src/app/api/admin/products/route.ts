@@ -136,11 +136,15 @@ export async function PATCH(req: NextRequest) {
       .update(dbPayload)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Supabase Product Update Error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Không tìm thấy sản phẩm để cập nhật' }, { status: 404 });
     }
 
     const response = NextResponse.json({
