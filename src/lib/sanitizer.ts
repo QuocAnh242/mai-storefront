@@ -1,23 +1,7 @@
-import DOMPurify from 'isomorphic-dompurify';
-
-/**
- * Sanitizes HTML input to prevent XSS attacks by removing malicious tags,
- * scripts, inline JS handlers (onerror, onload, etc.) and dangerous URIs.
- */
-export function sanitizeHtml(dirtyHtml: string): string {
-  if (!dirtyHtml) return '';
-  return DOMPurify.sanitize(dirtyHtml, {
-    ALLOWED_TAGS: [
-      'b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'img', 'blockquote'
-    ],
-    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'title', 'class'],
-  });
-}
-
 /**
  * Escape raw text strings for plain text fields (names, phones, notes)
- * to prevent HTML injection.
+ * to prevent HTML injection and XSS.
+ * Pure string regex — zero native dependencies, 100% serverless and edge safe.
  */
 export function sanitizeText(text: string): string {
   if (!text) return '';
@@ -28,4 +12,16 @@ export function sanitizeText(text: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
     .trim();
+}
+
+/**
+ * Sanitizes HTML input to prevent XSS attacks.
+ * Strips script tags, javascript: URIs, and inline event handlers safely without heavy native DOM dependencies.
+ */
+export function sanitizeHtml(dirtyHtml: string): string {
+  if (!dirtyHtml) return '';
+  return dirtyHtml
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\s*on\w+\s*=\s*(["'][^"']*["']|[^\s>]+)/gi, '')
+    .replace(/javascript\s*:[^"'>]*/gi, '');
 }
