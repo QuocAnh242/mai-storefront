@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, supabaseAdmin, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 /**
@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
       console.log(`PayOS confirmed payment for order: ${orderCode}`);
 
       if (isSupabaseConfigured()) {
-        const { error } = await supabase
+        const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
+        const { error } = await client
           .from('orders')
           .update({
             payment_status: 'paid',

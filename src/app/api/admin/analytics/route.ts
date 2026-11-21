@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     // 0. IP Rate Limiting: Max 60 requests per minute per IP
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    const rateLimit = checkRateLimit(`analytics_${clientIp}`, 60, 60);
+    const rateLimit = checkRateLimit(`analytics_${clientIp}`, 180, 60);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(

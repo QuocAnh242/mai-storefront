@@ -424,119 +424,63 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Blog Actions ─────────────────────────────────────────────────────────────
   const addBlogPost = async (blog: Omit<BlogPost, "id" | "createdAt">) => {
+    const tempId = `blog-${Date.now()}`;
     const post: BlogPost = {
       ...blog,
-      id: `blog-${Date.now()}`,
+      id: tempId,
       createdAt: new Date().toISOString().split("T")[0],
     };
     setBlogs((prev) => [post, ...prev]);
 
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const fullPayload = {
-        id: post.id,
-        title: post.title,
-        slug: post.slug,
-        category: post.category || "Mẹo hay",
-        thumbnail: post.thumbnail,
-        summary: post.summary,
-        content: post.content,
-        sections: post.sections || [],
-        author: post.author,
-        is_published: post.isPublished,
-      };
-
-      const { error: fullErr } = await supabase
-        .from("blogs")
-        .insert([fullPayload]);
-
-      if (fullErr) {
-        console.warn(
-          "Supabase full blog insert error, trying legacy fallback:",
-          fullErr.message,
-        );
-
-        // Fallback: Embed sections and category into content JSON string if DB table lacks new columns
-        const fallbackContent = JSON.stringify({
-          category: post.category || "Mẹo hay",
-          sections: post.sections || [],
-          rawContent: post.content,
-        });
-
-        const legacyPayload = {
-          id: post.id,
-          title: post.title,
-          slug: post.slug,
-          thumbnail: post.thumbnail,
-          summary: post.summary,
-          content: fallbackContent,
-          author: post.author,
-          is_published: post.isPublished,
-        };
-
-        const { error: legacyErr } = await supabase
-          .from("blogs")
-          .insert([legacyPayload]);
-        if (legacyErr) {
-          console.error(
-            "Error inserting blog into Supabase fallback:",
-            legacyErr.message,
+    try {
+      const res = await fetch("/api/admin/blogs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(blog),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setBlogs((prev) =>
+            prev.map((b) => (b.id === tempId ? { ...b, id: json.data.id } : b))
           );
         }
+      } else {
+        console.error("❌ Add blog failed:", await res.text());
       }
+    } catch (err) {
+      console.error("❌ Add blog error:", err);
     }
   };
 
   const updateBlogPost = async (id: string, blog: Partial<BlogPost>) => {
     setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...blog } : b)));
 
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const dbPayload: any = {};
-      if (blog.title !== undefined) dbPayload.title = blog.title;
-      if (blog.slug !== undefined) dbPayload.slug = blog.slug;
-      if (blog.category !== undefined) dbPayload.category = blog.category;
-      if (blog.thumbnail !== undefined) dbPayload.thumbnail = blog.thumbnail;
-      if (blog.summary !== undefined) dbPayload.summary = blog.summary;
-      if (blog.content !== undefined) dbPayload.content = blog.content;
-      if (blog.sections !== undefined) dbPayload.sections = blog.sections;
-      if (blog.author !== undefined) dbPayload.author = blog.author;
-      if (blog.isPublished !== undefined)
-        dbPayload.is_published = blog.isPublished;
-
-      const { error: updateErr } = await supabase
-        .from("blogs")
-        .update(dbPayload)
-        .eq("id", id);
-
-      if (updateErr) {
-        console.warn(
-          "Supabase blog update error, trying legacy fallback:",
-          updateErr.message,
-        );
-        delete dbPayload.category;
-        delete dbPayload.sections;
-        if (blog.sections || blog.category) {
-          dbPayload.content = JSON.stringify({
-            category: blog.category || "Mẹo hay",
-            sections: blog.sections || [],
-            rawContent: blog.content || "",
-          });
-        }
-        await supabase.from("blogs").update(dbPayload).eq("id", id);
+    try {
+      const res = await fetch("/api/admin/blogs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...blog }),
+      });
+      if (!res.ok) {
+        console.error("❌ Update blog failed:", await res.text());
       }
+    } catch (err) {
+      console.error("❌ Update blog error:", err);
     }
   };
 
   const deleteBlogPost = async (id: string) => {
     setBlogs((prev) => prev.filter((b) => b.id !== id));
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const { error } = await supabase
-        .from("blogs")
-        .delete()
-        .eq("id", id);
-      if (error) console.error("Error deleting blog from Supabase:", error);
+    try {
+      const res = await fetch(`/api/admin/blogs?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        console.error("❌ Delete blog failed:", await res.text());
+      }
+    } catch (err) {
+      console.error("❌ Delete blog error:", err);
     }
   };
 
@@ -588,17 +532,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ),
     );
 
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          payment_status: status,
-          ...(paidAt ? { paid_at: paidAt } : {}),
-        })
-        .eq("order_code", orderCode);
-      if (error)
-        console.error("Failed to update order status in Supabase:", error);
+    try {
+      await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderCode, status }),
+      });
+    } catch (err) {
+      console.error("❌ Failed to update order status:", err);
     }
   };
 
@@ -616,19 +557,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     setOrders((prev) => prev.filter((o) => o.orderCode !== orderCode));
 
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const { error } = await supabase
-        .from("orders")
-        .delete()
-        .eq("order_code", orderCode);
-      if (error) {
-        console.error("Failed to delete order from Supabase:", error);
-        return { success: false, message: "Xóa thất bại: " + error.message };
+    try {
+      const res = await fetch(`/api/admin/orders?orderCode=${encodeURIComponent(orderCode)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        return { success: false, message: json?.error || "Xóa đơn hàng thất bại." };
       }
+      return { success: true, message: json?.message || `Đã xóa đơn ${orderCode}.` };
+    } catch (err: any) {
+      return { success: false, message: "Lỗi kết nối: " + err.message };
     }
-
-    return { success: true, message: `Đã xóa đơn ${orderCode}.` };
   };
 
   return (

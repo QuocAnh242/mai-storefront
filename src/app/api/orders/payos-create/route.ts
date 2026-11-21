@@ -16,15 +16,15 @@ const CreateOrderSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // 1. IP Rate Limiting (Strictly Max 3 order attempts per IP per hour)
+    // 1. IP Rate Limiting: 20 lần tạo đơn / 10 phút trên 1 IP
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-    const rateLimit = checkRateLimit(`create_order_${clientIp}`, 3, 3600);
+    const rateLimit = checkRateLimit(`create_order_${clientIp}`, 20, 600);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
         {
           error: 'RATE_LIMIT_EXCEEDED',
-          message: `Bạn đã vượt quá giới hạn 3 lần tạo đơn hàng / giờ. Vui lòng thử lại sau ${rateLimit.resetSeconds} giây.`,
+          message: `Bạn thao tác tạo đơn hàng quá nhanh. Vui lòng thử lại sau ${rateLimit.resetSeconds} giây.`,
         },
         { status: 429 }
       );

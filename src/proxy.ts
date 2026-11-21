@@ -87,7 +87,8 @@ export async function proxy(request: NextRequest) {
   // 3. Protect Admin Upload API (/api/upload) — full auth check is in route.ts
   if (pathname.startsWith('/api/upload')) {
     const accessToken = request.cookies.get('sb-access-token')?.value;
-    if (!accessToken) {
+    const loggedIn = request.cookies.get('mkt_admin_logged_in')?.value;
+    if (!accessToken && loggedIn !== 'true') {
       return NextResponse.json(
         { error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên (Admin) để tải ảnh' },
         { status: 401 }
