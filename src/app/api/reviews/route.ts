@@ -30,10 +30,27 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const { data, error } = await supabase
+    const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const productKeys = [productId];
+
+    // Tra cứu xem productId có tương ứng với ID hoặc slug trong bảng sản phẩm không
+    try {
+      const { data: prodMatch } = await client
+        .from('products')
+        .select('id, slug')
+        .or(`id.eq.${productId},slug.eq.${productId}`)
+        .limit(1);
+
+      if (prodMatch && prodMatch.length > 0) {
+        if (prodMatch[0].id && !productKeys.includes(prodMatch[0].id)) productKeys.push(prodMatch[0].id);
+        if (prodMatch[0].slug && !productKeys.includes(prodMatch[0].slug)) productKeys.push(prodMatch[0].slug);
+      }
+    } catch {}
+
+    const { data, error } = await client
       .from('product_reviews')
       .select('id, product_id, author_name, rating, content, created_at, reply_content, replied_at')
-      .eq('product_id', productId)
+      .in('product_id', productKeys)
       .eq('is_approved', true)
       .order('created_at', { ascending: false });
 
@@ -83,15 +100,15 @@ export async function GET(req: NextRequest) {
 // POST: Khách hàng gửi đánh giá mới
 export async function POST(req: NextRequest) {
   try {
-    // 1. IP Rate Limiting tổng thể: Tối đa 3 đánh giá trong 10 phút trên 1 IP
+    // 1. IP Rate Limiting tổng thể: Tối đa 10 đánh giá trong 60 giây trên 1 IP
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`review_${clientIp}`, 3, 600);
+    const rateLimit = checkRateLimit(`review_${clientIp}`, 10, 60);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
         {
           error: 'RATE_LIMIT_EXCEEDED',
-          message: `Bạn thao tác quá nhanh hoặc gửi đánh giá liên tục. Vui lòng đợi ${rateLimit.resetSeconds} giây rồi thử lại!`,
+          message: `Bạn thao tác quá nhanh. Vui lòng đợi ${rateLimit.resetSeconds} giây rồi thử lại!`,
         },
         { status: 429 }
       );
@@ -113,13 +130,13 @@ export async function POST(req: NextRequest) {
 
     const { productId, authorName, rating, content } = parseResult.data;
 
-    // 3. Rate Limit chống spam cùng 1 sản phẩm: Tối đa 1 đánh giá / sản phẩm / 15 phút cho 1 IP
-    const productRateLimit = checkRateLimit(`review_${productId}_${clientIp}`, 1, 900);
+    // 3. Rate Limit chống spam cùng 1 sản phẩm: 20 giây giữa các lần gửi
+    const productRateLimit = checkRateLimit(`review_${productId}_${clientIp}`, 1, 20);
     if (!productRateLimit.allowed) {
       return NextResponse.json(
         {
           error: 'PRODUCT_RATE_LIMIT',
-          message: 'Bạn vừa gửi đánh giá cho sản phẩm này rồi. Vui lòng đợi ít phút nếu muốn gửi thêm!',
+          message: 'Bạn vừa gửi đánh giá cho sản phẩm này rồi. Vui lòng đợi 20 giây nếu muốn gửi thêm!',
         },
         { status: 429 }
       );
@@ -159,13 +176,27 @@ export async function POST(req: NextRequest) {
     }
 
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
+
+    // Chuẩn hóa productId: nếu là slug thì chuyển về primary id sản phẩm để đồng bộ
+    let targetProductId = productId;
+    try {
+      const { data: prodMatch } = await client
+        .from('products')
+        .select('id, slug')
+        .or(`id.eq.${productId},slug.eq.${productId}`)
+        .limit(1);
+      if (prodMatch && prodMatch.length > 0 && prodMatch[0].id) {
+        targetProductId = prodMatch[0].id;
+      }
+    } catch {}
+
     let insertedData: any = null;
 
     if (moderation.isApproved || isSupabaseAdminConfigured()) {
       const { data, error } = await client
         .from('product_reviews')
         .insert({
-          product_id: productId,
+          product_id: targetProductId,
           author_name: cleanAuthor,
           rating,
           content: cleanContent,
@@ -179,7 +210,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json(
             {
               error: 'TABLE_NOT_FOUND',
-              message: 'Bảng đánh giá chưa được khởi tạo trong Supabase. Vui lòng chạy file setup_reviews.sql trên Supabase SQL Editor.',
+              message: 'Bảng đánh giá chưa được khởi tạo trong Supabase.',
             },
             { status: 500 }
           );
@@ -188,12 +219,10 @@ export async function POST(req: NextRequest) {
       }
       insertedData = data;
     } else {
-      // Khi chỉ có anon key và is_approved = false (chờ duyệt):
-      // Không gọi .select().single() để tránh xung đột với policy RLS của PostgreSQL
       const { error } = await client
         .from('product_reviews')
         .insert({
-          product_id: productId,
+          product_id: targetProductId,
           author_name: cleanAuthor,
           rating,
           content: cleanContent,
@@ -201,15 +230,6 @@ export async function POST(req: NextRequest) {
         });
 
       if (error) {
-        if (error.code === 'PGRST205' || error.message.includes('not find the table')) {
-          return NextResponse.json(
-            {
-              error: 'TABLE_NOT_FOUND',
-              message: 'Bảng đánh giá chưa được khởi tạo trong Supabase. Vui lòng chạy file setup_reviews.sql trên Supabase SQL Editor.',
-            },
-            { status: 500 }
-          );
-        }
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     }
@@ -232,7 +252,7 @@ export async function POST(req: NextRequest) {
             content: insertedData.content,
             createdAt: insertedData.created_at,
           }
-        : null, // Không trả về payload cho client render nếu chưa được duyệt
+        : null,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

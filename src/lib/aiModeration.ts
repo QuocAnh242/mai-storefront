@@ -11,21 +11,22 @@ export interface ModerationResult {
   moderatedBy: 'ai_gemini' | 'rule_engine' | 'rating_heuristic';
 }
 
-// 1. Danh sách từ khóa chửi thề, thô tục, lăng mạ & lừa đảo tiếng Việt
+// 1. Danh sách từ khóa chửi thề, thô tục, lăng mạ & lừa đảo tiếng Việt (Sử dụng Unicode word boundary (?<!\p{L}) và (?!\p{L}))
 const PROFANITY_PATTERNS: RegExp[] = [
-  // Chửi bậy thông dụng & biến thể lách chữ
-  /\b(đ[ụùú]|d[ụùú]|du\s*ma|đ[ụùú]\s*m[ẹa]|đ[ụùú]\s*m[ẹa]|du\s*me)\b/i,
-  /\b(l[ồoòóõọôốồộ]n|c[ặa]c|bu[ồo]i|b[òo]i|d[áa]i)\b/i,
-  /\b(đ[ééeèẽ]o|d[ééeèẽ]o|deo|đek|đệt|đếch)\b/i,
-  /\b(đ[iị]t|d[iị]t|đ[iị]t\s*m[ẹa]|dit\s*me|đ[iị]t\s*c[ụu])\b/i,
-  /\b(đ[km]|d[km]|đcm|dcm|đmm|dmm|đcl|dcl|vcl|vkl|vcc|vl|clgt|cl|cđm|cdm|vcl)\b/i,
-  /\b(m[ẹe]\s*m[àa]y|m[ẹe]\s*n[óo]|cha\s*m[àa]y|b[ốo]\s*m[àa]y)\b/i,
-  /\b(ch[óo]\s*đ[ẻe]|ch[óo]\s*ch[ếe]t|s[úu]c\s*v[ậa]t|s[úu]c\s*sinh|kh[ốo]n\s*n[ạa]n)\b/i,
-  /\b(m[ấa]t\s*d[ạa]y|đ[ốo]\s*ch[óo]|l[ũu]\s*ch[óo]|th[ằa]ng\s*ch[óo])\b/i,
+  // Chửi bậy thông dụng & biến thể lách chữ (tránh false positive với các từ thông dụng: dùng, sử dụng, dù sao...)
+  /(?<!\p{L})(đ[ụùú]|d[ụùú]|du\s*ma|đ[ụùú]\s*m[ẹa]|du\s*me)(?!\p{L})/iu,
+  // Tránh false positive với từ "lon" (lon xi, lon sơn, lon nước) bằng cách chỉ bắt các biến thể mang dấu [ồòóõọôốồộ]
+  /(?<!\p{L})(l[ồòóõọôốồộ]n|c[ặa]c|bu[ồo]i|b[òo]i|d[áa]i)(?!\p{L})/iu,
+  /(?<!\p{L})(đ[ééeèẽ]o|d[ééeèẽ]o|deo|đek|đệt|đếch)(?!\p{L})/iu,
+  /(?<!\p{L})(đ[iị]t|d[iị]t|đ[iị]t\s*m[ẹa]|dit\s*me|đ[iị]t\s*c[ụu])(?!\p{L})/iu,
+  /(?<!\p{L})(đ[km]|d[km]|đcm|dcm|đmm|dmm|đcl|dcl|vcl|vkl|vcc|vl|clgt|cl|cđm|cdm)(?!\p{L})/iu,
+  /(?<!\p{L})(m[ẹe]\s*m[àa]y|m[ẹe]\s*n[óo]|cha\s*m[àa]y|b[ốo]\s*m[àa]y)(?!\p{L})/iu,
+  /(?<!\p{L})(ch[óo]\s*đ[ẻe]|ch[óo]\s*ch[ếe]t|s[úu]c\s*v[ậa]t|s[úu]c\s*sinh|kh[ốo]n\s*n[ạa]n)(?!\p{L})/iu,
+  /(?<!\p{L})(m[ấa]t\s*d[ạa]y|đ[ốo]\s*ch[óo]|l[ũu]\s*ch[óo]|th[ằa]ng\s*ch[óo])(?!\p{L})/iu,
   // Bôi nhọ, lừa đảo, xúc phạm nặng
-  /\b(l[ừu][àa]\s*đ[ảa]o|gian\s*l[ậa]n|l[ừu]a\s*ti[ềe]n|[ăa]n\s*c[ướu][ớo]p|b[ọo]n\s*l[ừu]a)\b/i,
+  /(?<!\p{L})(l[ừu][àa]\s*đ[ảa]o|gian\s*l[ậa]n|l[ừu]a\s*ti[ềe]n|[ăa]n\s*c[ướu][ớo]p|b[ọo]n\s*l[ừu]a)(?!\p{L})/iu,
   // Cờ bạc, cá độ rác
-  /\b(t[àa]i\s*x[ỉi]u|kubet|thabet|nohu|n[ổo]\s*h[ũu]|game\s*b[àa]i|k[èe]o\s*b[óo]ng)\b/i,
+  /(?<!\p{L})(t[àa]i\s*x[ỉi]u|kubet|thabet|nohu|n[ổo]\s*h[ũu]|game\s*b[àa]i|k[èe]o\s*b[óo]ng)(?!\p{L})/iu,
 ];
 
 // Hàm chuẩn hóa chuỗi để bắt biến thể lách chữ: "đ.ụ", "l_ồ_n", "d * m"

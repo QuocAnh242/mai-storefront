@@ -25,8 +25,20 @@ export async function GET(req: NextRequest) {
     let accessToken = cookieStore.get('sb-access-token')?.value;
     const refreshToken = cookieStore.get('sb-refresh-token')?.value;
 
+    let isTokenValid = false;
+    if (accessToken && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.auth.getUser(accessToken);
+        if (!error && data?.user) {
+          isTokenValid = true;
+        }
+      } catch {
+        isTokenValid = false;
+      }
+    }
+
     // If access token is missing or expired, attempt auto-refresh using the refresh token
-    if (!accessToken && refreshToken && isSupabaseConfigured()) {
+    if (!isTokenValid && refreshToken && isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
         if (!error && data?.session) {
@@ -54,6 +66,14 @@ export async function GET(req: NextRequest) {
             maxAge: 30 * 86400,
           });
 
+          response.cookies.set('mkt_admin_logged_in', 'true', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 30 * 86400,
+          });
+
           return response;
         }
       } catch (refreshErr) {
@@ -61,7 +81,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    if (!accessToken) {
+    if (!isTokenValid) {
       return NextResponse.json({ session: null });
     }
 

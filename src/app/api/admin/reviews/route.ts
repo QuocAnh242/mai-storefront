@@ -8,7 +8,7 @@ import { verifyAdminAuth, applySessionCookies } from '@/lib/adminAuth';
 export async function GET(req: NextRequest) {
   try {
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`adm_rev_get_${clientIp}`, 60, 60);
+    const rateLimit = checkRateLimit(`adm_rev_get_${clientIp}`, 300, 60);
     if (!rateLimit.allowed) {
       return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Quá nhiều yêu cầu, vui lòng thử lại sau.' }, { status: 429 });
     }

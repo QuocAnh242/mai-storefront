@@ -144,15 +144,37 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       // 2. Process Categories
       if (catRes.status === "fulfilled" && catRes.value.data && catRes.value.data.length > 0) {
-        setCategories(
-          catRes.value.data.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            slug: item.slug,
-            description: item.description,
-            subcategories: item.subcategories || [],
-          }))
-        );
+        const rawCats = catRes.value.data;
+        const mainCats = rawCats.filter((c: any) => !c.parent_id);
+        const subCats = rawCats.filter((c: any) => Boolean(c.parent_id));
+
+        const mappedCategories = mainCats.map((main: any) => {
+          const dbSubs = subCats
+            .filter((s: any) => s.parent_id === main.id)
+            .map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              slug: s.slug,
+              categoryId: main.id,
+            }));
+
+          const initialMatch = INITIAL_CATEGORIES.find((ic) => ic.id === main.id);
+          const initialSubs = initialMatch?.subcategories || [];
+
+          const subMap = new Map();
+          initialSubs.forEach((s) => subMap.set(s.id, s));
+          dbSubs.forEach((s: any) => subMap.set(s.id, s));
+
+          return {
+            id: main.id,
+            name: main.name,
+            slug: main.slug,
+            description: main.description,
+            subcategories: Array.from(subMap.values()),
+          };
+        });
+
+        setCategories(mappedCategories.length > 0 ? mappedCategories : INITIAL_CATEGORIES);
       } else {
         setCategories(INITIAL_CATEGORIES);
       }
@@ -224,40 +246,50 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Product Actions ──────────────────────────────────────────────────────────
   const addProduct = async (newProd: Omit<Product, "id" | "createdAt">) => {
+    const tempId = `p-${Date.now()}`;
     const product: Product = {
       ...newProd,
-      id: `p-${Date.now()}`,
+      id: tempId,
       createdAt: new Date().toISOString().split("T")[0],
     };
     setProducts((prev) => [product, ...prev]);
 
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const { error } = await supabase
-        .from("products")
-        .insert([
-          {
-            id: product.id,
-            title: product.title,
-            slug: product.slug,
-            price: product.price,
-            original_price: product.originalPrice,
-            unit: product.unit,
-            description: product.description,
-            category_id: product.categoryId,
-            category_name: product.categoryName,
-            subcategory_id: product.subcategoryId,
-            subcategory_name: product.subcategoryName,
-            images: product.images,
-            is_featured: product.isFeatured,
-            display_order: product.displayOrder,
-            in_stock: product.inStock,
-            specs: product.specs,
-          },
-        ]);
-      if (error) {
-        console.error("❌ Supabase Add Product Error:", error.message);
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProd),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          const created: Product = {
+            id: json.data.id,
+            title: json.data.title,
+            slug: json.data.slug,
+            price: Number(json.data.price),
+            originalPrice: json.data.original_price ? Number(json.data.original_price) : undefined,
+            isContactPrice: Boolean(Number(json.data.price) <= 1),
+            unit: json.data.unit,
+            description: json.data.description,
+            categoryId: json.data.category_id,
+            categoryName: json.data.category_name,
+            subcategoryId: json.data.subcategory_id,
+            subcategoryName: json.data.subcategory_name,
+            images: json.data.images || [],
+            isFeatured: json.data.is_featured,
+            displayOrder: json.data.display_order || 0,
+            inStock: json.data.in_stock,
+            specs: json.data.specs || {},
+            createdAt: json.data.created_at,
+          };
+          setProducts((prev) => prev.map((p) => (p.id === tempId ? created : p)));
+        }
+      } else {
+        console.error("❌ Add product failed:", await res.text());
       }
+    } catch (err) {
+      console.error("❌ Add product error:", err);
     }
   };
 
@@ -266,51 +298,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p)),
     );
 
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const dbPayload: any = {};
-      if (updatedFields.title !== undefined)
-        dbPayload.title = updatedFields.title;
-      if (updatedFields.slug !== undefined) dbPayload.slug = updatedFields.slug;
-      if (updatedFields.price !== undefined)
-        dbPayload.price = updatedFields.price;
-      if (updatedFields.originalPrice !== undefined)
-        dbPayload.original_price = updatedFields.originalPrice;
-      if (updatedFields.unit !== undefined)
-        dbPayload.unit = updatedFields.unit;
-      if (updatedFields.description !== undefined)
-        dbPayload.description = updatedFields.description;
-      if (updatedFields.categoryId !== undefined)
-        dbPayload.category_id = updatedFields.categoryId;
-      if (updatedFields.categoryName !== undefined)
-        dbPayload.category_name = updatedFields.categoryName;
-      if (updatedFields.subcategoryId !== undefined)
-        dbPayload.subcategory_id = updatedFields.subcategoryId;
-      if (updatedFields.subcategoryName !== undefined)
-        dbPayload.subcategory_name = updatedFields.subcategoryName;
-      if (updatedFields.images !== undefined)
-        dbPayload.images = updatedFields.images;
-      if (updatedFields.isFeatured !== undefined)
-        dbPayload.is_featured = updatedFields.isFeatured;
-      if (updatedFields.displayOrder !== undefined)
-        dbPayload.display_order = updatedFields.displayOrder;
-      if (updatedFields.inStock !== undefined)
-        dbPayload.in_stock = updatedFields.inStock;
-      const { error } = await supabase.from("products").update(dbPayload).eq("id", id);
-      if (error) {
-        console.error("❌ Supabase Update Product Error:", error.message);
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updatedFields }),
+      });
+      if (!res.ok) {
+        console.error("❌ Update product failed:", await res.text());
       }
+    } catch (err) {
+      console.error("❌ Update product error:", err);
     }
   };
 
   const deleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
-    if (isSupabaseConfigured()) {
-      await ensureAuthSession();
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) {
-        console.error("❌ Supabase Delete Product Error:", error.message);
+    try {
+      const res = await fetch(`/api/admin/products?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        console.error("❌ Delete product failed:", await res.text());
       }
+    } catch (err) {
+      console.error("❌ Delete product error:", err);
     }
   };
 
@@ -330,29 +342,84 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     if (isSupabaseConfigured()) {
       reorderedList.forEach((prod, index) => {
-        supabase
-          .from("products")
-          .update({ display_order: index + 1 })
-          .eq("id", prod.id)
-          .then();
+        fetch("/api/admin/products", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: prod.id, displayOrder: index + 1 }),
+        }).catch((err) => console.error("❌ Reorder error:", err));
       });
     }
   };
 
   // ── Category Actions ─────────────────────────────────────────────────────────
-  const addCategory = (cat: Omit<Category, "id">) => {
-    const category: Category = { ...cat, id: `cat-${Date.now()}` };
+  const addCategory = async (cat: Omit<Category, "id">) => {
+    const tempId = `cat-${Date.now()}`;
+    const category: Category = { ...cat, id: tempId };
     setCategories((prev) => [...prev, category]);
+
+    try {
+      const res = await fetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cat),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setCategories((prev) =>
+            prev.map((c) =>
+              c.id === tempId
+                ? {
+                    ...c,
+                    id: json.data.id,
+                    name: json.data.name,
+                    slug: json.data.slug,
+                    description: json.data.description,
+                  }
+                : c
+            )
+          );
+        }
+      } else {
+        console.error("❌ Add category failed:", await res.text());
+      }
+    } catch (err) {
+      console.error("❌ Add category error:", err);
+    }
   };
 
-  const updateCategory = (id: string, cat: Partial<Category>) => {
+  const updateCategory = async (id: string, cat: Partial<Category>) => {
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...cat } : c)),
     );
+
+    try {
+      const res = await fetch("/api/admin/categories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...cat }),
+      });
+      if (!res.ok) {
+        console.error("❌ Update category failed:", await res.text());
+      }
+    } catch (err) {
+      console.error("❌ Update category error:", err);
+    }
   };
 
-  const deleteCategory = (id: string) => {
+  const deleteCategory = async (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
+
+    try {
+      const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        console.error("❌ Delete category failed:", await res.text());
+      }
+    } catch (err) {
+      console.error("❌ Delete category error:", err);
+    }
   };
 
   // ── Blog Actions ─────────────────────────────────────────────────────────────
