@@ -20,7 +20,7 @@ export interface Product {
   slug: string;
   price: number;
   originalPrice?: number;
-  isContactPrice?: boolean; // Tùy chọn giá liên hệ báo giá thay vì số tiền cụ thể
+  isContactPrice?: boolean; // price-on-request flag instead of a fixed amount
   unit: string; // e.g., "hũ 100g", "kg", "cuộn", "chai"
   description: string;
   categoryId: string;

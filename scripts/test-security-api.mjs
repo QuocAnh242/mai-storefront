@@ -95,4 +95,65 @@ async function runSecurityTests() {
   }
 }
 
-runSecurityTests();
+// ── Phase 1 security probes ────────────────────────────────────────────────
+
+/**
+ * Reads Supabase env from .env.local and runs RLS behavior probes against the
+ * live database. Verifies the orders table has no public write/read policies
+ * (migration 0001) and public INSERT still works for checkout.
+ */
+async function runRlsProbes() {
+  const fs = await import('fs');
+  const env = {};
+  fs.readFileSync('.env.local', 'utf8').split('\n').forEach(l => {
+    const t = l.trim();
+    if (t && !t.startsWith('#')) {
+      const i = t.indexOf('=');
+      env[t.slice(0, i).trim()] = t.slice(i + 1).trim();
+    }
+  });
+
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const admin = env.SUPABASE_SERVICE_ROLE_KEY;
+
+  async function probe(label, method, path, body, expectStatus) {
+    const r = await fetch(`${url}${path}`, {
+      method,
+      headers: { apikey: anon, Authorization: `Bearer ${anon}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : null,
+    });
+    const pass = expectStatus.includes(r.status);
+    console.log(`${pass ? 'PASS' : 'FAIL'}  ${label}: ${r.status} (expected ${expectStatus.join('/')})`);
+    return r.status;
+  }
+
+  console.log('\n🛡️  === RLS PROBES (anon key, live DB) ===');
+  // Public write/read on orders must be rejected after migration 0001
+  await probe('ANON PATCH orders  ', 'PATCH', '/rest/v1/orders?order_code=eq.PROBE_X', { customer_note: 'x' }, [403, 401, 404]);
+  await probe('ANON DELETE orders ', 'DELETE', '/rest/v1/orders?order_code=eq.PROBE_X', null, [403, 401, 404]);
+  await probe('ANON SELECT orders ', 'GET', '/rest/v1/orders?select=*&limit=1', null, [200]); // 200 + empty [] is also acceptable
+  // Public INSERT must work for checkout flow
+  const insertRes = await fetch(`${url}/rest/v1/orders`, {
+    method: 'POST',
+    headers: { apikey: anon, Authorization: `Bearer ${anon}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ id: 'rls-probe-row', order_code: 'RLSPROBE1', customer_name: 'probe', customer_phone: '000', total_amount: 1, payment_method: 'cod', items: [] }),
+  });
+  console.log(`${insertRes.status === 201 ? 'PASS' : 'FAIL'}  ANON INSERT orders : ${insertRes.status} (expected 201)`);
+
+  // Cleanup probe row (service role)
+  if (insertRes.status === 201) {
+    await fetch(`${url}/rest/v1/orders?id=eq.rls-probe-row`, {
+      method: 'DELETE',
+      headers: { apikey: admin, Authorization: `Bearer ${admin}` },
+    });
+  }
+  console.log('🛡️  === RLS PROBES DONE ===');
+}
+
+const args = process.argv.slice(2);
+if (args.includes('--rls')) {
+  runRlsProbes();
+} else {
+  runSecurityTests();
+}

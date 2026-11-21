@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import { recordPageView, recordProductView } from "@/lib/analyticsStore";
 
 export async function POST(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     // 1. Rate limit: Max 60 tracking hits per minute per IP to prevent spam
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    const rateLimit = checkRateLimit(`track_${clientIp}`, 60, 60);
+    const rateLimit = await enforceRateLimit(`track_${clientIp}`, 60, 60);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { success: false, rateLimited: true },

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import { verifyAdminAuth, applySessionCookies } from "@/lib/adminAuth";
+import { detectImageMime, ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/imageValidation";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Rate limit: 40 uploads per IP per minute
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
-    const rateLimit = checkRateLimit(`upload_${clientIp}`, 40, 60);
+    const rateLimit = await enforceRateLimit(`upload_${clientIp}`, 40, 60);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "RATE_LIMIT_EXCEEDED", message: "Quá giới hạn tải ảnh. Vui lòng đợi ít phút." },
@@ -42,9 +43,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Không có file ảnh" }, { status: 400 });
     }
 
+    // 3. Size + MIME whitelist enforced server-side (never trust the client)
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: "FILE_TOO_LARGE", message: "Ảnh tối đa 5MB" },
+        { status: 400 },
+      );
+    }
+    if (file.type && !ALLOWED_IMAGE_MIME.includes(file.type as (typeof ALLOWED_IMAGE_MIME)[number])) {
+      return NextResponse.json(
+        { error: "UNSUPPORTED_FILE_TYPE", message: "Chỉ hỗ trợ ảnh JPEG, PNG, WebP, AVIF" },
+        { status: 400 },
+      );
+    }
+
     // Convert File to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // 4. Magic-byte sniffing: the declared MIME must match the actual file content
+    const detectedMime = detectImageMime(buffer);
+    if (!detectedMime || !ALLOWED_IMAGE_MIME.includes(detectedMime as (typeof ALLOWED_IMAGE_MIME)[number])) {
+      return NextResponse.json(
+        { error: "UNSUPPORTED_FILE_TYPE", message: "Nội dung file không phải ảnh hợp lệ" },
+        { status: 400 },
+      );
+    }
 
     // Upload to Cloudinary via upload stream
     const result = await new Promise<{ secure_url: string; public_id: string }>(

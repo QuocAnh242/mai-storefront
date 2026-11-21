@@ -1,6 +1,6 @@
 /**
  * Utility to convert Vietnamese and international text to URL-friendly slugs.
- * Handles Vietnamese diacritics (dấu tiếng Việt), accents, and special characters.
+ * Handles Vietnamese diacritics, accents, and special characters.
  */
 export function slugify(text: string): string {
   if (!text) return '';

@@ -1,31 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { supabase, supabaseAdmin, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
-
-/**
- * Verify HMAC SHA256 signature from PayOS webhook payload
- */
-function verifyPayOSSignature(data: Record<string, any>, signature: string, checksumKey: string): boolean {
-  if (!signature || !checksumKey) return false;
-
-  // Sort keys alphabetically
-  const sortedKeys = Object.keys(data).sort();
-  const dataStr = sortedKeys.map((key) => `${key}=${data[key] ?? ''}`).join('&');
-
-  const computedSignature = crypto
-    .createHmac('sha256', checksumKey)
-    .update(dataStr)
-    .digest('hex');
-
-  return computedSignature === signature;
-}
+import { enforceRateLimit } from '@/lib/rateLimit';
+import { verifyPayOSSignature } from '@/lib/payosSignature';
 
 export async function POST(req: NextRequest) {
   try {
     // 0. IP Rate Limiting: Max 60 requests per minute
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`payos_webhook_${clientIp}`, 60, 60);
+    const rateLimit = await enforceRateLimit(`payos_webhook_${clientIp}`, 60, 60);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -63,6 +45,38 @@ export async function POST(req: NextRequest) {
 
       if (isSupabaseConfigured()) {
         const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
+
+        // 3. Amount verification + idempotency: fetch the order before updating.
+        //    Reject when the paid amount does not match the stored total, and
+        //    skip the update entirely when the order is already marked paid.
+        const { data: order, error: fetchError } = await client
+          .from('orders')
+          .select('id, total_amount, payment_status')
+          .eq('order_code', orderCode)
+          .maybeSingle();
+
+        if (fetchError) {
+          console.error('Failed to fetch order for webhook verification:', fetchError);
+          return NextResponse.json({ error: 'DB_FETCH_FAILED' }, { status: 500 });
+        }
+
+        if (!order) {
+          console.warn(`PayOS webhook: order ${orderCode} not found — ignored.`);
+          return NextResponse.json({ success: true, message: 'Order not found — ignored' });
+        }
+
+        if (Number(data.amount) !== Number(order.total_amount)) {
+          console.error(
+            `PayOS webhook amount mismatch for ${orderCode}: expected ${order.total_amount}, got ${data.amount} — rejected.`,
+          );
+          return NextResponse.json({ error: 'AMOUNT_MISMATCH' }, { status: 400 });
+        }
+
+        if (order.payment_status === 'paid') {
+          // Idempotency: duplicate webhook for an already-paid order — acknowledge without re-updating.
+          return NextResponse.json({ success: true, message: 'Order already paid' });
+        }
+
         const { error } = await client
           .from('orders')
           .update({

@@ -3,38 +3,77 @@
 @layer base {
   :root {
     --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* ── Flat & Natural UI Design Tokens (Strict Anti-AI-Slop) ── */
+    --color-canvas: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f1f5f9;
+    --color-surface-hover: #f8fafc;
+
+    --color-border: #e2e8f0;
+    --color-border-subtle: #f1f5f9;
+    --color-border-hover: #cbd5e1;
+    --color-border-focus: #0f172a;
+
+    --color-text-main: #0f172a;
+    --color-text-body: #334155;
+    --color-text-muted: #64748b;
+    --color-text-subtle: #94a3b8;
+
+    --color-brand: #d97706; /* Warm amber for craft/glitter identity */
+    --color-brand-hover: #b45309;
+    --color-brand-subtle: #fef3c7;
+
+    --color-success: #059669;
+    --color-success-subtle: #ecfdf5;
+
+    --color-danger: #e11d48;
+    --color-danger-subtle: #fff1f2;
   }
 
   body {
     background-color: #ffffff;
-    color: #1e293b;
+    color: var(--color-text-body);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 }
 
-/* Smooth card hover */
-.card-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* ── Natural Card Interactivity (Crisp, subtle, no neon glow) ── */
+.card-flat {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.card-lift:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px -8px rgba(14, 116, 194, 0.12);
+.card-flat:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
 }
 
-/* Custom Scrollbar */
+/* Natural micro-elevation without oversized colored glows */
+.card-lift {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Minimalist Clean Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #bae6fd;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
+  background: #94a3b8;
 }

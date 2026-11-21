@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { verifyAdminTokenLocally } from '@/lib/jwtVerify';
 
 export interface AdminAuthResult {
   authorized: boolean;
@@ -11,17 +12,21 @@ export interface AdminAuthResult {
 }
 
 /**
- * Xác thực phiên Quản trị viên đa tầng:
- * 1. Kiểm tra JWT token hiện tại qua `supabase.auth.getUser(accessToken)`.
- * 2. Tự động phục hồi phiên (auto-refresh) nếu access token hết hạn (> 1 giờ) bằng `refreshToken`.
- * 3. Fallback xác thực qua cookie HttpOnly `mkt_admin_logged_in` khi đã cấu hình Service Role Key.
+ * Admin session verification:
+ * 1. Verify the JWT locally against the Supabase JWKS (no network roundtrip
+ *    on the hot path — signature + expiration checked in-process).
+ * 2. Fall back to `supabase.auth.getUser` when local verification is
+ *    inconclusive (legacy HS256 tokens, key rotation mid-flight).
+ * 3. Auto-refresh the session with the refresh token if the access token is expired.
+ *
+ * The `mkt_admin_logged_in` cookie fallback was removed (P1.2): an unsigned boolean
+ * cookie cannot be revoked or tied to a user.
  */
 export async function verifyAdminAuth(req: NextRequest): Promise<AdminAuthResult> {
   const accessToken = req.cookies.get('sb-access-token')?.value;
   const refreshToken = req.cookies.get('sb-refresh-token')?.value;
-  const loggedInCookie = req.cookies.get('mkt_admin_logged_in')?.value;
 
-  // Hỗ trợ kiểm tra Authorization: Bearer <token> từ client fetch
+  // Support Authorization: Bearer <token> from client fetch
   const authHeader = req.headers.get('authorization');
   let bearerToken: string | undefined = undefined;
   if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
@@ -34,7 +39,16 @@ export async function verifyAdminAuth(req: NextRequest): Promise<AdminAuthResult
     return { authorized: true };
   }
 
-  // 1. Thử xác thực trực tiếp bằng access token hoặc bearer token
+  // 1. Fast path: local JWT verification (no network)
+  if (tokenToVerify) {
+    const local = await verifyAdminTokenLocally(tokenToVerify);
+    if (local) {
+      return { authorized: true };
+    }
+  }
+
+  // 2. Network fallback for tokens the local verifier cannot confirm
+  //    (e.g. legacy signing keys) — still a valid user check via Supabase Auth.
   if (tokenToVerify) {
     try {
       const { data, error } = await supabase.auth.getUser(tokenToVerify);
@@ -46,7 +60,7 @@ export async function verifyAdminAuth(req: NextRequest): Promise<AdminAuthResult
     }
   }
 
-  // 2. Nếu access token thiếu hoặc đã hết hạn (JWT expired), tự động refresh phiên bằng refresh token
+  // 3. Auto-refresh the session if the access token is missing or expired
   if (refreshToken) {
     try {
       const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
@@ -65,16 +79,11 @@ export async function verifyAdminAuth(req: NextRequest): Promise<AdminAuthResult
     }
   }
 
-  // 3. Fallback: Nếu cookie quản trị viên hợp lệ và hệ thống có Service Role Key
-  if (loggedInCookie === 'true' && isSupabaseAdminConfigured()) {
-    return { authorized: true };
-  }
-
   return { authorized: false };
 }
 
 /**
- * Gán cookie phiên mới vào NextResponse nếu có đợt làm mới phiên tự động
+ * Apply refreshed session cookies to a NextResponse when available
  */
 export function applySessionCookies(response: NextResponse, newSession?: AdminAuthResult['newSession']): NextResponse {
   if (newSession) {
@@ -86,13 +95,6 @@ export function applySessionCookies(response: NextResponse, newSession?: AdminAu
       maxAge: newSession.expires_in || 86400,
     });
     response.cookies.set('sb-refresh-token', newSession.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 86400,
-    });
-    response.cookies.set('mkt_admin_logged_in', 'true', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

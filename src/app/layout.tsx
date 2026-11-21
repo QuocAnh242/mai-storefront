@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description:
     "Cửa hàng & Tổng kho phân phối sỉ lẻ MAI KIM TUYẾN tại Chợ Lớn TP.HCM - Chuyên bán buôn sỉ & lẻ Băng Keo các loại, Bột Kim Tuyến đủ size hạt, Bột Màu xây dựng & công nghiệp, Bột Nhũ Camay ánh kim, Bột Dạ Quang, Phản Quang, Sơn Xịt, Keo Dán giá tốt nhất. Giao hàng toàn quốc.",
   keywords: [
-    // Băng Keo
+    // Băng Keo (adhesive tape)
     "băng keo",
     "băng keo giá sỉ",
     "cửa hàng băng keo",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     "băng keo dán thạch cao",
     "băng keo tphcm",
     "băng keo chợ lớn",
-    // Kim Tuyến
+    // Kim Tuyến (glitter powder)
     "kim tuyến",
     "bột kim tuyến",
     "kim tuyến shop",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     "kim tuyến hạt mịn",
     "bột kim tuyến chợ lớn",
     "mua bột kim tuyến ở đâu",
-    // Bột Màu
+    // Bột Màu (color powder)
     "bột màu",
     "cửa hàng bột màu",
     "shop bột màu",
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     "bột màu công nghiệp",
     "bột màu giá sỉ",
     "bột màu chợ lớn",
-    // Bột Nhũ & Camay & Dạ Quang
+    // Bột Nhũ & Camay & Dạ Quang (pearl, Camay & glow-in-the-dark powder)
     "bột nhũ",
     "cửa hàng bột nhũ",
     "shop bột nhũ",
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     "bột dạ quang",
     "bột phản quang",
     "bột nhũ ngọc trai",
-    // Khác
+    // Khác (other)
     "keo dán dog x66",
     "sơn xịt atm",
     "vật tư chợ lớn",

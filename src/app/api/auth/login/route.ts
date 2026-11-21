@@ -1,27 +1,25 @@
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
-
-const LoginSchema = z.object({
-  email: z.string().email('Email không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
-});
+import { NextResponse } from "next/server";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { LoginSchema } from "@/lib/validation/schemas";
 
 export async function POST(req: Request) {
   try {
     // 1. IP Rate Limit: Max 15 login attempts per IP per 60 seconds
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`login_${clientIp}`, 15, 60);
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    const rateLimit = await enforceRateLimit(`login_${clientIp}`, 15, 60);
 
     if (!rateLimit.allowed) {
-      console.warn(`[Login Rate Limit Exceeded] IP: ${clientIp}, wait: ${rateLimit.resetSeconds}s`);
+      console.warn(
+        `[Login Rate Limit Exceeded] IP: ${clientIp}, wait: ${rateLimit.resetSeconds}s`,
+      );
       return NextResponse.json(
         {
-          error: 'RATE_LIMIT_EXCEEDED',
+          error: "RATE_LIMIT_EXCEEDED",
           message: `Bạn thao tác quá nhanh hoặc thử đăng nhập quá nhiều lần. Vui lòng đợi ${rateLimit.resetSeconds} giây rồi thử lại!`,
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -31,8 +29,11 @@ export async function POST(req: Request) {
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'INVALID_PAYLOAD', message: 'Tài khoản hoặc mật khẩu không hợp lệ' },
-        { status: 400 }
+        {
+          error: "INVALID_PAYLOAD",
+          message: "Tài khoản hoặc mật khẩu không hợp lệ",
+        },
+        { status: 400 },
       );
     }
 
@@ -41,8 +42,11 @@ export async function POST(req: Request) {
     // 3. Supabase Auth Verification (Real API)
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: 'SUPABASE_NOT_CONFIGURED', message: 'Hệ thống Supabase chưa được cấu hình biến môi trường' },
-        { status: 500 }
+        {
+          error: "SUPABASE_NOT_CONFIGURED",
+          message: "Hệ thống Supabase chưa được cấu hình biến môi trường",
+        },
+        { status: 500 },
       );
     }
 
@@ -53,10 +57,10 @@ export async function POST(req: Request) {
 
     if (error || !data.session) {
       const errorStatus = error?.status || 401;
-      const rawMsg = (error?.message || '').toLowerCase();
-      const errorCode = (error as any)?.code || '';
+      const rawMsg = (error?.message || "").toLowerCase();
+      const errorCode = (error as any)?.code || "";
 
-      console.error('[Supabase Auth Failed]:', {
+      console.error("[Supabase Auth Failed]:", {
         email,
         clientIp,
         status: errorStatus,
@@ -64,55 +68,60 @@ export async function POST(req: Request) {
         message: error?.message,
       });
 
-      // 1. Xử lý lỗi Rate Limit từ Supabase Auth API
+      // 1. Handle Supabase Auth rate limit errors
       if (
         errorStatus === 429 ||
-        rawMsg.includes('rate limit') ||
-        rawMsg.includes('too many') ||
-        rawMsg.includes('over email')
+        rawMsg.includes("rate limit") ||
+        rawMsg.includes("too many") ||
+        rawMsg.includes("over email")
       ) {
         return NextResponse.json(
           {
-            error: 'RATE_LIMIT_EXCEEDED',
-            message: 'Bạn thao tác quá nhanh hoặc hệ thống tạm khóa do thử đăng nhập nhiều lần. Vui lòng chờ 1-2 phút rồi thử lại!',
+            error: "RATE_LIMIT_EXCEEDED",
+            message:
+              "Bạn thao tác quá nhanh hoặc hệ thống tạm khóa do thử đăng nhập nhiều lần. Vui lòng chờ 1-2 phút rồi thử lại!",
           },
-          { status: 429 }
+          { status: 429 },
         );
       }
 
-      // 2. Xử lý lỗi sai mật khẩu / tài khoản
+      // 2. Handle invalid credentials
       if (
-        rawMsg.includes('invalid login credentials') ||
-        errorCode === 'invalid_credentials' ||
-        rawMsg.includes('invalid_grant')
+        rawMsg.includes("invalid login credentials") ||
+        errorCode === "invalid_credentials" ||
+        rawMsg.includes("invalid_grant")
       ) {
         return NextResponse.json(
           {
-            error: 'INVALID_CREDENTIALS',
-            message: 'Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại (chú ý tắt gõ tiếng Việt Unikey/EVKey khi nhập mật khẩu).',
+            error: "INVALID_CREDENTIALS",
+            message:
+              "Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại (chú ý tắt gõ tiếng Việt Unikey/EVKey khi nhập mật khẩu).",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
-      // 3. Xử lý lỗi email chưa xác nhận
-      if (rawMsg.includes('email not confirmed')) {
+      // 3. Handle unconfirmed email
+      if (rawMsg.includes("email not confirmed")) {
         return NextResponse.json(
           {
-            error: 'EMAIL_NOT_CONFIRMED',
-            message: 'Tài khoản email này chưa được xác thực trong Supabase Authentication.',
+            error: "EMAIL_NOT_CONFIRMED",
+            message:
+              "Tài khoản email này chưa được xác thực trong Supabase Authentication.",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
-      // 4. Các lỗi khác từ máy chủ Supabase
+      // 4. Other Supabase server errors
       return NextResponse.json(
         {
-          error: 'AUTH_FAILED',
-          message: error?.message || 'Không thể xác thực thông tin đăng nhập. Vui lòng thử lại sau giây lát.',
+          error: "AUTH_FAILED",
+          message:
+            error?.message ||
+            "Không thể xác thực thông tin đăng nhập. Vui lòng thử lại sau giây lát.",
         },
-        { status: errorStatus }
+        { status: errorStatus },
       );
     }
 
@@ -121,7 +130,7 @@ export async function POST(req: Request) {
     // 4. Create Response with HttpOnly JWT Cookies and Session Payload
     const response = NextResponse.json({
       success: true,
-      message: 'Đăng nhập thành công',
+      message: "Đăng nhập thành công",
       session: {
         access_token,
         refresh_token,
@@ -134,33 +143,28 @@ export async function POST(req: Request) {
     });
 
     // Set HttpOnly, Secure, SameSite=Lax Cookies for JWT Session (Lax enables session persistence on reload/navigation)
-    response.cookies.set('sb-access-token', access_token, {
+    response.cookies.set("sb-access-token", access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: expires_in || 86400,
     });
 
-    response.cookies.set('sb-refresh-token', refresh_token, {
+    response.cookies.set("sb-refresh-token", refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 86400,
-    });
-
-    response.cookies.set('mkt_admin_logged_in', 'true', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 30 * 86400,
     });
 
     return response;
   } catch (error: any) {
-    console.error('Server Auth Error:', error);
-    return NextResponse.json({ error: 'SERVER_ERROR', message: error.message }, { status: 500 });
+    console.error("Server Auth Error:", error);
+    return NextResponse.json(
+      { error: "SERVER_ERROR", message: error.message },
+      { status: 500 },
+    );
   }
 }

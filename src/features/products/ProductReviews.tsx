@@ -27,7 +27,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
   const [showForm, setShowForm] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  // Tải danh sách đánh giá
+  // Fetch review list
   const fetchReviews = async () => {
     try {
       setLoading(true);
@@ -61,7 +61,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
     }
   }, [productId]);
 
-  // Các mức điểm đánh giá với chỉ dẫn trực quan từ Tệ đến Tốt
+  // Rating levels from worst to best
   const RATING_LEVELS = [
     { value: 1, label: '1 Điểm', desc: 'Rất tệ', detail: 'Chất lượng rất kém, giao hàng quá chậm', activeClass: 'bg-rose-950 text-white border-rose-900' },
     { value: 2, label: '2 Điểm', desc: 'Chưa tốt', detail: 'Sản phẩm hoặc giao hàng chưa đạt yêu cầu', activeClass: 'bg-amber-950 text-white border-amber-900' },
@@ -72,7 +72,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
 
   const currentLevel = RATING_LEVELS.find((l) => l.value === rating) || RATING_LEVELS[4];
 
-  // Bước 1: Khi bấm nút "Gửi đánh giá", kiểm tra hợp lệ rồi mở Modal xác nhận
+  // Step 1: validate input, then open confirm modal
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setNotice(null);
@@ -89,7 +89,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
     setShowConfirmModal(true);
   };
 
-  // Bước 2: Khách hàng bấm "Xác nhận gửi" trong Modal
+  // Step 2: user confirms submission in the modal
   const handleConfirmSubmit = async () => {
     setShowConfirmModal(false);
 
@@ -112,7 +112,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         try {
           json = JSON.parse(text);
         } catch {
-          // phản hồi không phải dạng json (ví dụ timeout hoặc lỗi server)
+          // response is not JSON (e.g. timeout or server error)
         }
       }
 
@@ -129,7 +129,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         message: json.message || 'Cảm ơn bạn đã gửi đánh giá! Nhận xét đã được ghi nhận thành công.',
       });
 
-      // Thêm review mới vào danh sách nếu được hiển thị công khai ngay
+      // Prepend newly created review if it is immediately public
       if (json.data) {
         const newReviews = [json.data, ...reviews];
         setReviews(newReviews);
@@ -164,7 +164,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
 
   return (
     <div className="space-y-6">
-      {/* ─── BẢNG ĐIỂM TỔNG QUAN (FLAT & MINIMAL) ─── */}
+      {/* ─── RATING SUMMARY PANEL (FLAT & MINIMAL) ─── */}
       <div className="bg-slate-50 p-5 sm:p-6 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="space-y-1">
           <div className="flex items-baseline gap-2">
@@ -193,7 +193,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         </button>
       </div>
 
-      {/* ─── THÔNG BÁO TRẠNG THÁI (TEXT MINIMAL) ─── */}
+      {/* ─── STATUS NOTICE (TEXT MINIMAL) ─── */}
       {notice && (
         <div
           className={`p-3.5 rounded-xl text-xs font-semibold border ${
@@ -206,7 +206,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         </div>
       )}
 
-      {/* ─── 1 FORM: TÊN CỦA BẠN - ĐÁNH GIÁ (1 ĐẾN 5) - CẢM NHẬN ─── */}
+          {/* ─── 1 FORM: NAME - RATING (1 TO 5) - REVIEW TEXT ─── */}
       {showForm && (
         <form
           onSubmit={handlePreSubmit}
@@ -221,7 +221,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             </p>
           </div>
 
-          {/* 1. Tên của bạn */}
+          {/* 1. Author name */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
               Tên của bạn (*)
@@ -241,7 +241,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             </div>
           </div>
 
-          {/* 2. Đánh giá: Thang điểm 1 (Rất tệ) -> 5 (Rất tốt) UX thân thiện */}
+          {/* 2. Rating scale 1 (worst) -> 5 (best) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
@@ -254,7 +254,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
               </div>
             </div>
 
-            {/* 5 nút phẳng xếp từ 1 (Tệ) đến 5 (Tốt) */}
+            {/* 5 flat buttons from 1 (worst) to 5 (best) */}
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
               {RATING_LEVELS.map((level) => {
                 const isSelected = rating === level.value;
@@ -278,7 +278,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
               })}
             </div>
 
-            {/* Dòng mô tả giải thích mức điểm đang chọn */}
+            {/* Description of the currently selected rating */}
             <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-2">
               <span className="text-slate-600">
                 Mức điểm đã chọn: <strong className="text-slate-900 font-black">{currentLevel.value} / 5 Điểm</strong> ({currentLevel.desc})
@@ -289,7 +289,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             </div>
           </div>
 
-          {/* 3. Cảm nhận: */}
+          {/* 3. Review text */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
               Cảm nhận (*)
@@ -304,7 +304,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
             />
           </div>
 
-          {/* Nút gửi form */}
+          {/* Form submit actions */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -337,7 +337,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         </form>
       )}
 
-      {/* ─── MODAL XÁC NHẬN GỬI ĐÁNH GIÁ (FLAT & MINIMAL) ─── */}
+      {/* ─── SUBMIT CONFIRMATION MODAL (FLAT & MINIMAL) ─── */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-2xl space-y-4 animate-in zoom-in-95">
@@ -405,7 +405,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
         </div>
       )}
 
-      {/* ─── DANH SÁCH ĐÁNH GIÁ & PHẢN HỒI TỪ CỬA HÀNG ─── */}
+      {/* ─── REVIEW LIST & STORE RESPONSES ─── */}
       <div className="space-y-3">
         {loading ? (
           <div className="space-y-3">
@@ -462,7 +462,7 @@ export function ProductReviews({ productId, productTitle }: ProductReviewsProps)
                       {r.content}
                     </p>
 
-                    {/* Phản hồi từ cửa hàng Mai Kim Tuyến (nếu có) */}
+                    {/* Store reply (if any) */}
                     {r.replyContent && (
                       <div className="mt-3 bg-slate-50 border-l-2 border-slate-900 p-3 sm:p-3.5 rounded-r-xl space-y-1">
                         <div className="flex items-center justify-between gap-2 flex-wrap">

@@ -1,21 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
-import { verifyAdminAuth, applySessionCookies } from '@/lib/adminAuth';
+import { withAdminRoute, ok, fail } from '@/lib/api/withAdminRoute';
+import { NextResponse } from 'next/server';
+import { applySessionCookies } from '@/lib/adminAuth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`acc_get_${clientIp}`, 60, 60);
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
-    }
-
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
+export const GET = withAdminRoute(
+  {
+    rateLimit: { key: 'acc_get', limit: 60, windowSeconds: 60 },
+    requireServiceRole: false,
+  },
+  async ({ auth }) => {
+    // Preserve the custom not-configured response shape
     if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
       return applySessionCookies(
         NextResponse.json({
@@ -24,7 +18,7 @@ export async function GET(req: NextRequest) {
           error: 'Chưa cấu hình biến môi trường SUPABASE_SERVICE_ROLE_KEY trong .env.local. Vui lòng lấy Service Role Secret từ Supabase Dashboard (Settings -> API) để truy xuất danh sách người dùng qua API thật.',
           data: [],
         }),
-        authResult.newSession
+        auth.newSession,
       );
     }
 
@@ -35,7 +29,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return fail(error.message, 500);
     }
 
     const accounts = (data.users || []).map((u) => ({
@@ -47,42 +41,31 @@ export async function GET(req: NextRequest) {
       lastLoginAt: u.last_sign_in_at,
     }));
 
-    const response = NextResponse.json({ success: true, data: accounts });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({ data: accounts }, { newSession: auth.newSession });
+  },
+);
 
-export async function POST(req: NextRequest) {
-  try {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`acc_create_${clientIp}`, 30, 60);
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
-    }
-
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
+export const POST = withAdminRoute(
+  {
+    rateLimit: { key: 'acc_create', limit: 30, windowSeconds: 60 },
+    requireServiceRole: false,
+  },
+  async ({ req, auth }) => {
     const body = await req.json();
     const { email, fullName, password } = body;
 
     if (!email || !email.includes('@')) {
-      return NextResponse.json({ error: 'Email không hợp lệ' }, { status: 400 });
+      return fail('Email không hợp lệ', 400);
     }
     if (!password || password.length < 6) {
-      return NextResponse.json({ error: 'Mật khẩu phải tối thiểu 6 ký tự' }, { status: 400 });
+      return fail('Mật khẩu phải tối thiểu 6 ký tự', 400);
     }
 
+    // Preserve the custom not-configured response shape
     if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        {
-          error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trong .env.local để tạo tài khoản trực tiếp qua Supabase Auth API.',
-        },
-        { status: 500 }
+      return fail(
+        'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trong .env.local để tạo tài khoản trực tiếp qua Supabase Auth API.',
+        500,
       );
     }
 
@@ -97,52 +80,43 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return fail(error.message, 400);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        id: data.user.id,
-        email: data.user.email,
-        fullName: data.user.user_metadata?.full_name || fullName,
-        role: 'super_admin',
-        createdAt: data.user.created_at,
+    return ok(
+      {
+        data: {
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.user_metadata?.full_name || fullName,
+          role: 'super_admin',
+          createdAt: data.user.created_at,
+        },
       },
-    });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+      { newSession: auth.newSession },
+    );
+  },
+);
 
-export async function PATCH(req: NextRequest) {
-  try {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`acc_patch_${clientIp}`, 30, 60);
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
-    }
-
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
+export const PATCH = withAdminRoute(
+  {
+    rateLimit: { key: 'acc_patch', limit: 30, windowSeconds: 60 },
+    requireServiceRole: false,
+  },
+  async ({ req, auth }) => {
     const body = await req.json();
     const { action, accountId, newPassword } = body;
 
     if (action === 'change_password') {
       if (!newPassword || newPassword.length < 6) {
-        return NextResponse.json({ error: 'Mật khẩu mới tối thiểu 6 ký tự' }, { status: 400 });
+        return fail('Mật khẩu mới tối thiểu 6 ký tự', 400);
       }
 
+      // Preserve the custom not-configured response shape
       if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-        return NextResponse.json(
-          {
-            error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trong .env.local để đổi mật khẩu qua Supabase Auth API.',
-          },
-          { status: 500 }
+        return fail(
+          'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trong .env.local để đổi mật khẩu qua Supabase Auth API.',
+          500,
         );
       }
 
@@ -152,45 +126,34 @@ export async function PATCH(req: NextRequest) {
       });
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return fail(error.message, 400);
       }
 
-      const response = NextResponse.json({ success: true, message: 'Đổi mật khẩu thành công qua Supabase Auth API' });
-      return applySessionCookies(response, authResult.newSession);
+      return ok({}, { message: 'Đổi mật khẩu thành công qua Supabase Auth API', newSession: auth.newSession });
     }
 
-    return NextResponse.json({ error: 'Hành động không hợp lệ' }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return fail('Hành động không hợp lệ', 400);
+  },
+);
 
-export async function DELETE(req: NextRequest) {
-  try {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`acc_del_${clientIp}`, 30, 60);
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
-    }
-
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
+export const DELETE = withAdminRoute(
+  {
+    rateLimit: { key: 'acc_del', limit: 30, windowSeconds: 60 },
+    requireServiceRole: false,
+  },
+  async ({ req, auth }) => {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'Thiếu account ID' }, { status: 400 });
+      return fail('Thiếu account ID', 400);
     }
 
+    // Preserve the custom not-configured response shape
     if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        {
-          error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trong .env.local để xóa tài khoản qua Supabase Auth API.',
-        },
-        { status: 500 }
+      return fail(
+        'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trong .env.local để xóa tài khoản qua Supabase Auth API.',
+        500,
       );
     }
 
@@ -198,12 +161,9 @@ export async function DELETE(req: NextRequest) {
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return fail(error.message, 400);
     }
 
-    const response = NextResponse.json({ success: true, message: 'Đã xóa tài khoản thành công qua Supabase Auth API' });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({}, { message: 'Đã xóa tài khoản thành công qua Supabase Auth API', newSession: auth.newSession });
+  },
+);

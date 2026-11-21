@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
 
-// Danh sách email Superadmin mặc định (fallback nếu không kết nối được Supabase Auth)
+// Default superadmin email list (fallback when Supabase Auth is unavailable)
 export const DEFAULT_SUPERADMIN_EMAILS = [
   'lingchen.9210@gmail.com',
   'chuyencungcapkimtuyensivale@gmail.com',
@@ -8,7 +8,7 @@ export const DEFAULT_SUPERADMIN_EMAILS = [
 ];
 
 /**
- * Lấy danh sách email của tất cả Superadmin từ Supabase Auth
+ * Fetch all superadmin emails from Supabase Auth.
  */
 export async function getSuperadminEmails(): Promise<string[]> {
   try {
@@ -24,7 +24,7 @@ export async function getSuperadminEmails(): Promise<string[]> {
           .filter((e): e is string => typeof e === 'string' && e.includes('@'));
 
         if (emails.length > 0) {
-          // Trả về danh sách email không trùng lặp
+          // Deduplicate emails
           return Array.from(new Set(emails));
         }
       }
@@ -41,11 +41,11 @@ export interface SendCleanupReportParams {
   totalViewsLast30Days: number;
   totalVisitorsLast30Days: number;
   topProducts: { title: string; views: number }[];
-  plannedCleanupDate: string; // Ngày dự kiến xóa bản ghi cũ (sau 7 ngày)
+  plannedCleanupDate: string; // Planned date to purge old records (after 7 days)
 }
 
 /**
- * Gửi email thông báo báo cáo lưu lượng truy cập và lịch dọn dẹp sau 30 ngày
+ * Send the traffic report email with the 30-day data cleanup schedule notice.
  */
 export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): Promise<{
   success: boolean;
@@ -66,10 +66,9 @@ export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): P
     return { success: false, error: 'MISSING_RESEND_API_KEY' };
   }
 
-  // Tiêu đề email
   const subject = `[Mai Kim Tuyến] Báo cáo lưu lượng truy cập tháng & Thông báo dọn dẹp dữ liệu`;
 
-  // HTML Template chuyên nghiệp, chuẩn Responsive
+  // Responsive HTML email template
   const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -169,12 +168,12 @@ export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): P
 </html>
   `;
 
-  // Kiểm tra tên miền đã verify hay chưa
+  // Check whether the sending domain has been verified
   let fromAddress = 'Mai Kim Tuyến <thongbao@maikimtuyen.io.vn>';
   let recipients = toEmails;
 
   try {
-    // Thử gửi qua domain chính thức maikimtuyen.io.vn
+    // Try sending via the primary domain maikimtuyen.io.vn
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -192,7 +191,7 @@ export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): P
     const data = await res.json();
 
     if (!res.ok) {
-      // Nếu domain maikimtuyen.io.vn chưa verify xong, fallback gửi qua onboarding@resend.dev tới email đăng ký
+      // If maikimtuyen.io.vn is not yet verified, fall back to onboarding@resend.dev
       if (data?.message?.includes('verify a domain') || data?.statusCode === 403) {
         console.warn('[EmailService Notice] Domain maikimtuyen.io.vn đang chờ xác thực DNS. Đang gửi email dự phòng qua onboarding@resend.dev...');
         
@@ -204,7 +203,7 @@ export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): P
           },
           body: JSON.stringify({
             from: 'Mai Kim Tuyến <onboarding@resend.dev>',
-            to: ['wasasi241224@gmail.com'], // Gửi tới email đã đăng ký Resend
+            to: ['wasasi241224@gmail.com'], // Send to the email registered with Resend
             subject,
             html: htmlContent,
           }),

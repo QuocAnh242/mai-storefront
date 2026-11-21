@@ -1,5 +1,6 @@
 import { Order } from '@/shared/types';
 import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
+import { extractPayOSOrderNumber } from '@/lib/ids';
 
 export interface PayOSPaymentLinkRequest {
   orderCode: number;
@@ -61,7 +62,8 @@ export async function createPayOSCheckout(order: Order, baseUrl: string): Promis
   checkoutUrl: string;
   qrCodeUrl: string;
 }> {
-  const numericOrderCode = parseInt(order.orderCode.replace(/\D/g, '')) || Date.now() % 1000000;
+  // Stable numeric id derived from the order code (PayOS requires a numeric orderCode)
+  const numericOrderCode = extractPayOSOrderNumber(order.orderCode);
   
   const payosClientId = process.env.NEXT_PUBLIC_PAYOS_CLIENT_ID || process.env.PAYOS_CLIENT_ID;
   const payosApiKey = process.env.NEXT_PUBLIC_PAYOS_API_KEY || process.env.PAYOS_API_KEY;

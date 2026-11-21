@@ -9,6 +9,7 @@ import {
   INITIAL_STORE_SETTINGS,
 } from "../constants/initialData";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { generateOrderCode, generateEntityId } from "@/lib/ids";
 import { useToast } from "@/shared/context/ToastContext";
 
 interface StoreContextType {
@@ -25,18 +26,33 @@ interface StoreContextType {
   setSearchQuery: (query: string) => void;
 
   // Actions
-  addProduct: (product: Omit<Product, "id" | "createdAt">) => Promise<{ success: boolean; error?: string; data?: Product }>;
-  updateProduct: (id: string, product: Partial<Product>) => Promise<{ success: boolean; error?: string }>;
+  addProduct: (
+    product: Omit<Product, "id" | "createdAt">,
+  ) => Promise<{ success: boolean; error?: string; data?: Product }>;
+  updateProduct: (
+    id: string,
+    product: Partial<Product>,
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
-  clearAllProducts: () => void;
-  reorderFeaturedProducts: (reorderedList: Product[]) => void;
+  clearAllProducts: () => Promise<void> | void;
+  reorderFeaturedProducts: (reorderedList: Product[]) => Promise<void> | void;
 
-  addCategory: (category: Omit<Category, "id">) => Promise<{ success: boolean; error?: string; data?: Category }>;
-  updateCategory: (id: string, category: Partial<Category>) => Promise<{ success: boolean; error?: string }>;
+  addCategory: (
+    category: Omit<Category, "id">,
+  ) => Promise<{ success: boolean; error?: string; data?: Category }>;
+  updateCategory: (
+    id: string,
+    category: Partial<Category>,
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteCategory: (id: string) => Promise<{ success: boolean; error?: string }>;
 
-  addBlogPost: (blog: Omit<BlogPost, "id" | "createdAt">) => Promise<{ success: boolean; error?: string; data?: BlogPost }>;
-  updateBlogPost: (id: string, blog: Partial<BlogPost>) => Promise<{ success: boolean; error?: string }>;
+  addBlogPost: (
+    blog: Omit<BlogPost, "id" | "createdAt">,
+  ) => Promise<{ success: boolean; error?: string; data?: BlogPost }>;
+  updateBlogPost: (
+    id: string,
+    blog: Partial<BlogPost>,
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteBlogPost: (id: string) => Promise<{ success: boolean; error?: string }>;
 
   createOrder: (
@@ -64,9 +80,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Helper lấy headers có kèm Authorization token nếu client đã đăng nhập
+  // Build headers with Authorization token when a client session exists
   const getAuthHeaders = async () => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     try {
       const { data } = await supabase.auth.getSession();
       if (data?.session?.access_token) {
@@ -123,130 +141,158 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     Promise.allSettled([
       supabase.from("products").select("*"),
       supabase.from("categories").select("*"),
-      supabase.from("blogs").select("*").order("created_at", { ascending: false }),
-      supabase.from("orders").select("*").order("created_at", { ascending: false }),
-    ]).then(([prodRes, catRes, blogRes, orderRes]) => {
-      if (!isMounted) return;
+      supabase
+        .from("blogs")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false }),
+    ])
+      .then(([prodRes, catRes, blogRes, orderRes]) => {
+        if (!isMounted) return;
 
-      // 1. Process Products
-      if (prodRes.status === "fulfilled" && prodRes.value.data && prodRes.value.data.length > 0) {
-        setProducts(
-          prodRes.value.data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            slug: item.slug,
-            price: Number(item.price),
-            originalPrice: item.original_price ? Number(item.original_price) : undefined,
-            isContactPrice: Boolean(item.is_contact_price || Number(item.price) <= 1),
-            unit: item.unit,
-            description: item.description,
-            categoryId: item.category_id,
-            categoryName: item.category_name,
-            subcategoryId: item.subcategory_id,
-            subcategoryName: item.subcategory_name,
-            images: item.images || [],
-            isFeatured: item.is_featured,
-            displayOrder: item.display_order || 0,
-            inStock: item.in_stock,
-            specs: item.specs || {},
-            createdAt: item.created_at,
-          }))
-        );
-      } else {
-        setProducts(INITIAL_PRODUCTS);
-      }
+        // 1. Process Products
+        if (
+          prodRes.status === "fulfilled" &&
+          prodRes.value.data &&
+          prodRes.value.data.length > 0
+        ) {
+          setProducts(
+            prodRes.value.data.map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              slug: item.slug,
+              price: Number(item.price),
+              originalPrice: item.original_price
+                ? Number(item.original_price)
+                : undefined,
+              isContactPrice: Boolean(
+                item.is_contact_price || Number(item.price) <= 1,
+              ),
+              unit: item.unit,
+              description: item.description,
+              categoryId: item.category_id,
+              categoryName: item.category_name,
+              subcategoryId: item.subcategory_id,
+              subcategoryName: item.subcategory_name,
+              images: item.images || [],
+              isFeatured: item.is_featured,
+              displayOrder: item.display_order || 0,
+              inStock: item.in_stock,
+              specs: item.specs || {},
+              createdAt: item.created_at,
+            })),
+          );
+        } else {
+          setProducts(INITIAL_PRODUCTS);
+        }
 
-      // 2. Process Categories
-      if (catRes.status === "fulfilled" && catRes.value.data && catRes.value.data.length > 0) {
-        const rawCats = catRes.value.data;
-        const mainCats = rawCats.filter((c: any) => !c.parent_id);
-        const subCats = rawCats.filter((c: any) => Boolean(c.parent_id));
+        // 2. Process Categories
+        if (
+          catRes.status === "fulfilled" &&
+          catRes.value.data &&
+          catRes.value.data.length > 0
+        ) {
+          const rawCats = catRes.value.data;
+          const mainCats = rawCats.filter((c: any) => !c.parent_id);
+          const subCats = rawCats.filter((c: any) => Boolean(c.parent_id));
 
-        const mappedCategories = mainCats.map((main: any) => {
-          const dbSubs = subCats
-            .filter((s: any) => s.parent_id === main.id)
-            .map((s: any) => ({
-              id: s.id,
-              name: s.name,
-              slug: s.slug,
-              categoryId: main.id,
-            }));
+          const mappedCategories = mainCats.map((main: any) => {
+            const dbSubs = subCats
+              .filter((s: any) => s.parent_id === main.id)
+              .map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                slug: s.slug,
+                categoryId: main.id,
+              }));
 
-          const initialMatch = INITIAL_CATEGORIES.find((ic) => ic.id === main.id);
-          const initialSubs = initialMatch?.subcategories || [];
+            const initialMatch = INITIAL_CATEGORIES.find(
+              (ic) => ic.id === main.id,
+            );
+            const initialSubs = initialMatch?.subcategories || [];
 
-          const subMap = new Map();
-          initialSubs.forEach((s) => subMap.set(s.id, s));
-          dbSubs.forEach((s: any) => subMap.set(s.id, s));
+            const subMap = new Map();
+            initialSubs.forEach((s) => subMap.set(s.id, s));
+            dbSubs.forEach((s: any) => subMap.set(s.id, s));
 
-          return {
-            id: main.id,
-            name: main.name,
-            slug: main.slug,
-            description: main.description,
-            subcategories: Array.from(subMap.values()),
-          };
-        });
+            return {
+              id: main.id,
+              name: main.name,
+              slug: main.slug,
+              description: main.description,
+              subcategories: Array.from(subMap.values()),
+            };
+          });
 
-        setCategories(mappedCategories.length > 0 ? mappedCategories : INITIAL_CATEGORIES);
-      } else {
-        setCategories(INITIAL_CATEGORIES);
-      }
+          setCategories(
+            mappedCategories.length > 0 ? mappedCategories : INITIAL_CATEGORIES,
+          );
+        } else {
+          setCategories(INITIAL_CATEGORIES);
+        }
 
-      // 3. Process Blogs
-      if (blogRes.status === "fulfilled" && blogRes.value.data && blogRes.value.data.length > 0) {
-        setBlogs(
-          blogRes.value.data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            slug: item.slug,
-            category: item.category || "Mẹo hay",
-            thumbnail: item.thumbnail,
-            summary: item.summary,
-            content: item.content || "",
-            sections: item.sections || [],
-            author: item.author || "Chị Mai Kim Tuyến",
-            isPublished: item.is_published ?? true,
-            createdAt: item.created_at
-              ? new Date(item.created_at).toISOString().split("T")[0]
-              : new Date().toISOString().split("T")[0],
-          }))
-        );
-      } else {
-        setBlogs(INITIAL_BLOGS);
-      }
+        // 3. Process Blogs
+        if (
+          blogRes.status === "fulfilled" &&
+          blogRes.value.data &&
+          blogRes.value.data.length > 0
+        ) {
+          setBlogs(
+            blogRes.value.data.map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              slug: item.slug,
+              category: item.category || "Mẹo hay",
+              thumbnail: item.thumbnail,
+              summary: item.summary,
+              content: item.content || "",
+              sections: item.sections || [],
+              author: item.author || "Chị Mai Kim Tuyến",
+              isPublished: item.is_published ?? true,
+              createdAt: item.created_at
+                ? new Date(item.created_at).toISOString().split("T")[0]
+                : new Date().toISOString().split("T")[0],
+            })),
+          );
+        } else {
+          setBlogs(INITIAL_BLOGS);
+        }
 
-      // 4. Process Orders
-      if (orderRes.status === "fulfilled" && orderRes.value.data) {
-        setOrders(
-          orderRes.value.data.map((item: any) => ({
-            id: item.id,
-            orderCode: item.order_code,
-            customerName: item.customer_name,
-            customerPhone: item.customer_phone,
-            customerAddress: item.customer_address,
-            customerNote: item.customer_note,
-            totalAmount: Number(item.total_amount),
-            paymentMethod: item.payment_method,
-            paymentStatus: item.payment_status,
-            items: item.items || [],
-            payosCheckoutUrl: item.payos_checkout_url,
-            payosQrCodeUrl: item.payos_qr_code_url,
-            createdAt: item.created_at,
-            paidAt: item.paid_at,
-          }))
-        );
-      }
+        // 4. Process Orders
+        if (orderRes.status === "fulfilled" && orderRes.value.data) {
+          setOrders(
+            orderRes.value.data.map((item: any) => ({
+              id: item.id,
+              orderCode: item.order_code,
+              customerName: item.customer_name,
+              customerPhone: item.customer_phone,
+              customerAddress: item.customer_address,
+              customerNote: item.customer_note,
+              totalAmount: Number(item.total_amount),
+              paymentMethod: item.payment_method,
+              paymentStatus: item.payment_status,
+              items: item.items || [],
+              payosCheckoutUrl: item.payos_checkout_url,
+              payosQrCodeUrl: item.payos_qr_code_url,
+              createdAt: item.created_at,
+              paidAt: item.paid_at,
+            })),
+          );
+        }
 
-      setIsLoading(false);
-    }).catch(() => {
-      if (isMounted) {
-        setProducts(INITIAL_PRODUCTS);
-        setCategories(INITIAL_CATEGORIES);
-        setBlogs(INITIAL_BLOGS);
         setIsLoading(false);
-      }
-    });
+      })
+      .catch(() => {
+        if (isMounted) {
+          setProducts(INITIAL_PRODUCTS);
+          setCategories(INITIAL_CATEGORIES);
+          setBlogs(INITIAL_BLOGS);
+          setIsLoading(false);
+        }
+      });
 
     return () => {
       isMounted = false;
@@ -260,7 +306,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Product Actions ──────────────────────────────────────────────────────────
   const addProduct = async (
-    newProd: Omit<Product, "id" | "createdAt">
+    newProd: Omit<Product, "id" | "createdAt">,
   ): Promise<{ success: boolean; error?: string; data?: Product }> => {
     try {
       const headers = await getAuthHeaders();
@@ -272,7 +318,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Thêm sản phẩm thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Thêm sản phẩm thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -283,8 +330,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         title: item.title,
         slug: item.slug,
         price: Number(item.price),
-        originalPrice: item.original_price ? Number(item.original_price) : undefined,
-        isContactPrice: Boolean(item.is_contact_price || Number(item.price) <= 1),
+        originalPrice: item.original_price
+          ? Number(item.original_price)
+          : undefined,
+        isContactPrice: Boolean(
+          item.is_contact_price || Number(item.price) <= 1,
+        ),
         unit: item.unit,
         description: item.description,
         categoryId: item.category_id,
@@ -311,7 +362,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const updateProduct = async (
     id: string,
-    updatedFields: Partial<Product>
+    updatedFields: Partial<Product>,
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers = await getAuthHeaders();
@@ -323,13 +374,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Cập nhật sản phẩm thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Cập nhật sản phẩm thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
 
       setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
+        prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p)),
       );
       showToast("Cập nhật sản phẩm thành công!", "success");
       return { success: true };
@@ -340,17 +392,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
+  const deleteProduct = async (
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/products?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers,
-      });
+      const res = await fetch(
+        `/api/admin/products?id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Xóa sản phẩm thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Xóa sản phẩm thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -365,14 +423,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const clearAllProducts = () => {
+  const clearAllProducts = async () => {
     setProducts([]);
     if (isSupabaseConfigured()) {
-      supabase.from("products").delete().neq("id", "").then();
+      try {
+        const headers = await getAuthHeaders();
+        await fetch("/api/admin/products?action=clear_all&confirm=true", {
+          method: "DELETE",
+          headers,
+        });
+      } catch (err) {
+        console.warn("[clearAllProducts error]:", err);
+      }
     }
   };
 
-  const reorderFeaturedProducts = (reorderedList: Product[]) => {
+  const reorderFeaturedProducts = async (reorderedList: Product[]) => {
     const updatedProducts = products.map((p) => {
       const idx = reorderedList.findIndex((item) => item.id === p.id);
       return idx !== -1 ? { ...p, displayOrder: idx + 1 } : p;
@@ -380,19 +446,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProducts(updatedProducts);
 
     if (isSupabaseConfigured()) {
-      reorderedList.forEach((prod, index) => {
-        fetch("/api/admin/products", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: prod.id, displayOrder: index + 1 }),
-        }).catch((err) => console.error("❌ Reorder error:", err));
-      });
+      try {
+        const headers = await getAuthHeaders();
+        const productIds = reorderedList.map((p) => p.id);
+        const res = await fetch("/api/admin/products", {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ action: "reorder", productIds }),
+        });
+        if (!res.ok) {
+          console.warn(
+            "[reorderFeaturedProducts] server returned status:",
+            res.status,
+          );
+        }
+      } catch (err) {
+        console.warn("[reorderFeaturedProducts error]:", err);
+      }
     }
   };
 
   // ── Category Actions ─────────────────────────────────────────────────────────
   const addCategory = async (
-    cat: Omit<Category, "id">
+    cat: Omit<Category, "id">,
   ): Promise<{ success: boolean; error?: string; data?: Category }> => {
     try {
       const headers = await getAuthHeaders();
@@ -404,7 +480,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Tạo danh mục thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Tạo danh mục thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -429,7 +506,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const updateCategory = async (
     id: string,
-    cat: Partial<Category>
+    cat: Partial<Category>,
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers = await getAuthHeaders();
@@ -441,13 +518,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Cập nhật danh mục thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Cập nhật danh mục thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
 
       setCategories((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, ...cat } : c))
+        prev.map((c) => (c.id === id ? { ...c, ...cat } : c)),
       );
       showToast("Cập nhật danh mục thành công!", "success");
       return { success: true };
@@ -458,17 +536,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const deleteCategory = async (id: string): Promise<{ success: boolean; error?: string }> => {
+  const deleteCategory = async (
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers,
-      });
+      const res = await fetch(
+        `/api/admin/categories?id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Xóa danh mục thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Xóa danh mục thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -485,7 +569,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Blog Actions ─────────────────────────────────────────────────────────────
   const addBlogPost = async (
-    blog: Omit<BlogPost, "id" | "createdAt">
+    blog: Omit<BlogPost, "id" | "createdAt">,
   ): Promise<{ success: boolean; error?: string; data?: BlogPost }> => {
     try {
       const headers = await getAuthHeaders();
@@ -497,7 +581,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Tạo bài viết thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Tạo bài viết thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -531,7 +616,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const updateBlogPost = async (
     id: string,
-    blog: Partial<BlogPost>
+    blog: Partial<BlogPost>,
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers = await getAuthHeaders();
@@ -543,12 +628,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Cập nhật bài viết thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Cập nhật bài viết thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
 
-      setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...blog } : b)));
+      setBlogs((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, ...blog } : b)),
+      );
       showToast("Cập nhật bài viết thành công!", "success");
       return { success: true };
     } catch (err: any) {
@@ -558,7 +646,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const deleteBlogPost = async (id: string): Promise<{ success: boolean; error?: string }> => {
+  const deleteBlogPost = async (
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/blogs?id=${encodeURIComponent(id)}`, {
@@ -568,7 +658,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        const errorMsg = json?.error || json?.message || "Xóa bài viết thất bại";
+        const errorMsg =
+          json?.error || json?.message || "Xóa bài viết thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -587,11 +678,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const createOrder = async (
     orderInput: Omit<Order, "id" | "createdAt" | "orderCode">,
   ): Promise<Order> => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderCode = `MKT${randomNum}`;
+    const orderCode = generateOrderCode();
     const newOrder: Order = {
       ...orderInput,
-      id: `ord-${Date.now()}`,
+      id: generateEntityId("ord"),
       orderCode,
       createdAt: new Date().toISOString(),
     };
@@ -638,7 +728,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ orderCode, status }),
       });
     } catch (err) {
-      console.error("❌ Failed to update order status:", err);
+      console.error("Failed to update order status:", err);
     }
   };
 
@@ -657,14 +747,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setOrders((prev) => prev.filter((o) => o.orderCode !== orderCode));
 
     try {
-      const res = await fetch(`/api/admin/orders?orderCode=${encodeURIComponent(orderCode)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/admin/orders?orderCode=${encodeURIComponent(orderCode)}`,
+        {
+          method: "DELETE",
+        },
+      );
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        return { success: false, message: json?.error || "Xóa đơn hàng thất bại." };
+        return {
+          success: false,
+          message: json?.error || "Xóa đơn hàng thất bại.",
+        };
       }
-      return { success: true, message: json?.message || `Đã xóa đơn ${orderCode}.` };
+      return {
+        success: true,
+        message: json?.message || `Đã xóa đơn ${orderCode}.`,
+      };
     } catch (err: any) {
       return { success: false, message: "Lỗi kết nối: " + err.message };
     }

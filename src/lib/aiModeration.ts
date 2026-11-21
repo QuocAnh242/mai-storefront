@@ -1,21 +1,21 @@
 /**
  * AI Content Moderation & Profanity Filtering Engine
- * Tự động đọc hiểu, chấm điểm độc hại và quyết định phê duyệt bình luận khách hàng.
+ * Automatically analyzes, scores, and decides approval of customer reviews.
  */
 
 export interface ModerationResult {
-  isApproved: boolean; // true: Tự động hiển thị ngay | false: Ẩn và chờ Admin duyệt
-  toxicityScore: number; // 0 (Hoàn toàn an toàn) đến 1 (Rất độc hại)
+  isApproved: boolean; // true: auto-publish | false: hide and queue for admin review
+  toxicityScore: number; // 0 (fully safe) to 1 (highly toxic)
   reason: string;
   flaggedKeywords: string[];
   moderatedBy: 'ai_gemini' | 'rule_engine' | 'rating_heuristic';
 }
 
-// 1. Danh sách từ khóa chửi thề, thô tục, lăng mạ & lừa đảo tiếng Việt (Sử dụng Unicode word boundary (?<!\p{L}) và (?!\p{L}))
-const PROFANITY_PATTERNS: RegExp[] = [
-  // Chửi bậy thông dụng & biến thể lách chữ (tránh false positive với các từ thông dụng: dùng, sử dụng, dù sao...)
-  /(?<!\p{L})(đ[ụùú]|d[ụùú]|du\s*ma|đ[ụùú]\s*m[ẹa]|du\s*me)(?!\p{L})/iu,
-  // Tránh false positive với từ "lon" (lon xi, lon sơn, lon nước) bằng cách chỉ bắt các biến thể mang dấu [ồòóõọôốồộ]
+// 1. Vietnamese profanity, vulgar, abusive & scam keyword patterns (Unicode word boundaries: (?<!\p{L}) and (?!\p{L}))
+export const PROFANITY_PATTERNS: RegExp[] = [
+  // Common profanity & obfuscated variants (avoids false positives with common words: dù, dùng, sử dụng, dù sao...)
+  /(?<!\p{L})(đ[ụùú]|d[ụú]|du\s*ma|đ[ụùú]\s*m[ẹa]|du\s*me)(?!\p{L})/iu,
+  // Avoid false positive with "lon" (lon xi, lon sơn, lon nước) by matching only accented variants [ồòóõọôốồộ]
   /(?<!\p{L})(l[ồòóõọôốồộ]n|c[ặa]c|bu[ồo]i|b[òo]i|d[áa]i)(?!\p{L})/iu,
   /(?<!\p{L})(đ[ééeèẽ]o|d[ééeèẽ]o|deo|đek|đệt|đếch)(?!\p{L})/iu,
   /(?<!\p{L})(đ[iị]t|d[iị]t|đ[iị]t\s*m[ẹa]|dit\s*me|đ[iị]t\s*c[ụu])(?!\p{L})/iu,
@@ -23,25 +23,25 @@ const PROFANITY_PATTERNS: RegExp[] = [
   /(?<!\p{L})(m[ẹe]\s*m[àa]y|m[ẹe]\s*n[óo]|cha\s*m[àa]y|b[ốo]\s*m[àa]y)(?!\p{L})/iu,
   /(?<!\p{L})(ch[óo]\s*đ[ẻe]|ch[óo]\s*ch[ếe]t|s[úu]c\s*v[ậa]t|s[úu]c\s*sinh|kh[ốo]n\s*n[ạa]n)(?!\p{L})/iu,
   /(?<!\p{L})(m[ấa]t\s*d[ạa]y|đ[ốo]\s*ch[óo]|l[ũu]\s*ch[óo]|th[ằa]ng\s*ch[óo])(?!\p{L})/iu,
-  // Bôi nhọ, lừa đảo, xúc phạm nặng
+  // Defamation, scam, and severe insults
   /(?<!\p{L})(l[ừu][àa]\s*đ[ảa]o|gian\s*l[ậa]n|l[ừu]a\s*ti[ềe]n|[ăa]n\s*c[ướu][ớo]p|b[ọo]n\s*l[ừu]a)(?!\p{L})/iu,
-  // Cờ bạc, cá độ rác
+  // Gambling & betting spam
   /(?<!\p{L})(t[àa]i\s*x[ỉi]u|kubet|thabet|nohu|n[ổo]\s*h[ũu]|game\s*b[àa]i|k[èe]o\s*b[óo]ng)(?!\p{L})/iu,
 ];
 
-// Hàm chuẩn hóa chuỗi để bắt biến thể lách chữ: "đ.ụ", "l_ồ_n", "d * m"
-function normalizeTextForProfanityCheck(text: string): string {
+// Normalize text to catch obfuscation variants: "đ.ụ", "l_ồ_n", "d * m"
+export function normalizeTextForProfanityCheck(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[._\-*~@#$^&+=|/\\]/g, '') // Xóa ký tự chen giữa
+    .replace(/[._\-*~@#$^&+=|/\\]/g, '') // Strip interleaved separator characters
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 /**
- * Kiểm tra bằng Rule-based Engine nội bộ (0ms latency, cực kỳ tin cậy)
+ * Internal rule-based engine check (0ms latency, highly reliable).
  */
-function checkLocalProfanity(text: string): { hasProfanity: boolean; matched: string[] } {
+export function checkLocalProfanity(text: string): { hasProfanity: boolean; matched: string[] } {
   const normalized = normalizeTextForProfanityCheck(text);
   const matched: string[] = [];
 
@@ -58,7 +58,7 @@ function checkLocalProfanity(text: string): { hasProfanity: boolean; matched: st
 }
 
 /**
- * Gọi AI Google Gemini để đọc hiểu văn cảnh và chấm điểm độ an toàn (Nếu có API key)
+ * Call Google Gemini AI for contextual reading and safety scoring (if an API key is configured).
  */
 async function checkWithGemini(
   content: string,
@@ -82,7 +82,7 @@ YÊU CẦU TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON (KHÔNG KÈM MARKDOWN HO
   "reason": "Giải thích ngắn gọn lý do bằng tiếng Việt"
 }`;
 
-    // Sử dụng AbortSignal timeout 3.5s để bảo vệ API không bị treo khi mạng chậm hoặc Google quá tải
+    // 3.5s AbortSignal timeout guards against hangs on slow networks or Google overload
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`,
       {
@@ -125,10 +125,10 @@ YÊU CẦU TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON (KHÔNG KÈM MARKDOWN HO
 }
 
 /**
- * Hàm kiểm duyệt tổng hợp chính:
- * 1. Quét từ ngữ chửi thề & lách chữ bằng Regex Engine.
- * 2. Gọi AI Gemini đọc ngữ cảnh (nếu có key).
- * 3. Áp dụng quy tắc Heuristic (1-2 sao với từ ngữ gắt gao sẽ tự động đưa vào hàng chờ duyệt).
+ * Main composite moderation function:
+ * 1. Scan profanity & obfuscation via the regex rule engine.
+ * 2. Call Gemini AI for contextual analysis (if a key is configured).
+ * 3. Apply heuristics (1-2 star reviews with harsh wording go to the review queue).
  */
 export async function moderateReviewContent(params: {
   authorName: string;
@@ -138,11 +138,11 @@ export async function moderateReviewContent(params: {
   const { authorName, content, rating } = params;
   const combinedText = `${authorName} ${content}`;
 
-  // ── BƯỚC 1: Quét từ ngữ chửi thề thô tục ngay lập tức ──
+  // ── Step 1: Scan for profanity and vulgar language immediately ──
   const localCheck = checkLocalProfanity(combinedText);
   if (localCheck.hasProfanity) {
     return {
-      isApproved: false, // Ẩn ngay lập tức, chuyển vào hàng chờ duyệt
+      isApproved: false, // Hide immediately and queue for review
       toxicityScore: 0.95,
       reason: 'Phát hiện từ ngữ thô tục, chửi thề hoặc lăng mạ trong nội dung.',
       flaggedKeywords: localCheck.matched,
@@ -150,12 +150,12 @@ export async function moderateReviewContent(params: {
     };
   }
 
-  // ── BƯỚC 2: Gọi AI Google Gemini nếu có cấu hình GEMINI_API_KEY ──
+  // ── Step 2: Call Google Gemini AI if GEMINI_API_KEY is configured ──
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
   if (geminiKey) {
     const aiResult = await checkWithGemini(content, authorName, rating, geminiKey);
     if (aiResult) {
-      // Nếu AI đánh giá mức độc hại > 0.4 hoặc không an toàn
+      // Disapprove if AI flags it unsafe or toxicityScore >= 0.4
       const shouldApprove = aiResult.isSafe && aiResult.toxicityScore < 0.4;
       return {
         isApproved: shouldApprove,
@@ -167,14 +167,14 @@ export async function moderateReviewContent(params: {
     }
   }
 
-  // ── BƯỚC 3: Heuristic Rule - Đánh giá 1 - 2 sao có từ ngữ tiêu cực gắt gao ──
-  // Đánh giá 1-2 sao thường cần được shop xem xét và hỗ trợ trước khi công khai
+  // ── Step 3: Heuristic rule - 1-2 star reviews containing strongly negative wording ──
+  // Low ratings usually require shop review and customer support before publishing
   const harshWords = ['quá tệ', 'cực kỳ tệ', 'thất vọng', 'rất bực', 'không chấp nhận được', 'quá kém', 'hàng dỏm', 'bị hỏng', 'bị rách'];
   const hasHarshWords = harshWords.some((w) => content.toLowerCase().includes(w));
 
   if (rating <= 2 && hasHarshWords) {
     return {
-      isApproved: false, // Tự động đưa vào hàng chờ duyệt để chủ shop liên hệ hỗ trợ khách trước
+      isApproved: false, // Queue for review so the shop can contact the customer first
       toxicityScore: 0.45,
       reason: 'Đánh giá điểm thấp có phản ánh tiêu cực mạnh. Đưa vào hàng chờ duyệt để hỗ trợ khách hàng trước khi hiển thị.',
       flaggedKeywords: harshWords.filter((w) => content.toLowerCase().includes(w)),
@@ -182,7 +182,7 @@ export async function moderateReviewContent(params: {
     };
   }
 
-  // Mặc định: An toàn và hợp lệ -> Tự động duyệt hiển thị ngay
+  // Default: safe and valid -> auto-approve for immediate display
   return {
     isApproved: true,
     toxicityScore: 0.05,

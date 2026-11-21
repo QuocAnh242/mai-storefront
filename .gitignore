@@ -46,5 +46,9 @@ next-env.d.ts
 # runtime data cache
 /data/
 
-# sensitive admin scripts
-supabase/seed_admin_users.sql
+# testing & coverage
+.vitest/
+coverage/
+
+# turbo
+.turbo/

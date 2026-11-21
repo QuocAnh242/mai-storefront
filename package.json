@@ -7,6 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "harness": "vitest run && npx tsc --noEmit && next build",
+    "harness:quick": "vitest run && npx tsc --noEmit",
+    "db:diff": "supabase db diff",
+    "db:migrate": "supabase db push",
     "seed:admin": "node scripts/seed-admin.mjs"
   },
   "dependencies": {
@@ -14,9 +20,12 @@
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "@types/nodemailer": "^8.0.2",
+    "@upstash/ratelimit": "^2.2.1",
+    "@upstash/redis": "^1.41.0",
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "isomorphic-dompurify": "^3.22.0",
+    "jose": "^6.2.18",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
     "nodemailer": "^10.6.0",
@@ -32,7 +41,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "supabase": "3.2.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }

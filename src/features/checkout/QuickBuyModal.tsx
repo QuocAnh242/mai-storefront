@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Product, Order } from '@/shared/types';
-import { useStore } from '@/shared/context/StoreContext';
-import { generateOrderQrUrl } from '@/lib/payos';
-import { X, ShoppingBag, QrCode, PhoneCall, CheckCircle2, Copy, RefreshCw } from 'lucide-react';
-import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Product, Order } from "@/shared/types";
+import { useStore } from "@/shared/context/StoreContext";
+import { generateOrderQrUrl } from "@/lib/payos";
+import {
+  X,
+  ShoppingBag,
+  QrCode,
+  PhoneCall,
+  CheckCircle2,
+  Copy,
+  RefreshCw,
+} from "lucide-react";
+import { INITIAL_STORE_SETTINGS } from "@/shared/constants/initialData";
 
 interface QuickBuyModalProps {
   product: Product | null;
@@ -16,11 +24,13 @@ interface QuickBuyModalProps {
 export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
   const { createOrder } = useStore();
   const [quantity, setQuantity] = useState(1);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [customerNote, setCustomerNote] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'payos_qr' | 'zalo_contact'>('payos_qr');
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerNote, setCustomerNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "payos_qr" | "zalo_contact"
+  >("payos_qr");
 
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,12 +44,12 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
   // ESC key listener to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   if (!product || !mounted) return null;
@@ -49,7 +59,7 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !customerPhone) {
-      alert('Vui lòng điền họ tên và số điện thoại của bạn!');
+      alert("Vui lòng điền họ tên và số điện thoại của bạn!");
       return;
     }
 
@@ -62,7 +72,7 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
         customerNote,
         totalAmount,
         paymentMethod,
-        paymentStatus: 'pending',
+        paymentStatus: "pending",
         items: [
           {
             productId: product.id,
@@ -76,13 +86,15 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
       });
       setCreatedOrder(order);
     } catch (err) {
-      console.error('Lỗi tạo đơn hàng:', err);
+      console.error("Lỗi tạo đơn hàng:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const qrData = createdOrder ? generateOrderQrUrl(createdOrder.orderCode, createdOrder.totalAmount) : null;
+  const qrData = createdOrder
+    ? generateOrderQrUrl(createdOrder.orderCode, createdOrder.totalAmount)
+    : null;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -106,8 +118,12 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
               <ShoppingBag className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm">Đặt Mua Nhanh & Thanh Toán QR</h3>
-              <p className="text-[10px] text-sky-200">Xác nhận đơn hàng tức thì trong vài giây</p>
+              <h3 className="font-bold text-sm">
+                Đặt Mua Nhanh & Thanh Toán QR
+              </h3>
+              <p className="text-[10px] text-sky-200">
+                Xác nhận đơn hàng tức thì trong vài giây
+              </p>
             </div>
           </div>
           <button
@@ -129,12 +145,19 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 className="w-16 h-16 object-cover rounded-xl border border-slate-200 shrink-0"
               />
               <div className="flex-1">
-                <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{product.title}</h4>
-                <p className="text-xs text-slate-500 mt-0.5">Quy cách: {product.unit}</p>
+                <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                  {product.title}
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Quy cách: {product.unit}
+                </p>
                 <div className="text-sky-700 font-extrabold text-sm mt-1">
                   {product.isContactPrice || product.price <= 1
-                    ? 'Liên hệ báo giá'
-                    : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                    ? "Liên hệ báo giá"
+                    : new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(product.price)}
                 </div>
               </div>
               {/* Quantity Picker */}
@@ -146,7 +169,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 >
                   -
                 </button>
-                <span className="px-3 py-1.5 text-xs font-bold text-slate-900">{quantity}</span>
+                <span className="px-3 py-1.5 text-xs font-bold text-slate-900">
+                  {quantity}
+                </span>
                 <button
                   type="button"
                   onClick={() => setQuantity(quantity + 1)}
@@ -159,10 +184,14 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
 
             {/* Customer Contact Fields */}
             <div className="space-y-3">
-              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Thông tin người mua:</h4>
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                Thông tin người mua:
+              </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Họ & Tên (*)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Họ & Tên (*)
+                  </label>
                   <input
                     type="text"
                     required
@@ -174,7 +203,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại (*)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Số điện thoại (*)
+                  </label>
                   <input
                     type="tel"
                     required
@@ -187,7 +218,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Địa chỉ nhận hàng (nếu có)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Địa chỉ nhận hàng (nếu có)
+                </label>
                 <input
                   type="text"
                   placeholder="Ví dụ: 123 Nguyễn Văn Cừ, Q.5, TP.HCM"
@@ -198,7 +231,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Ghi chú đơn hàng</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Ghi chú đơn hàng
+                </label>
                 <input
                   type="text"
                   placeholder="Ví dụ: Cần đóng gói 5 hũ loại hạt vừa..."
@@ -211,21 +246,23 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
 
             {/* Payment Method Selector */}
             <div className="space-y-2">
-              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Hình thức thanh toán:</h4>
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                Hình thức thanh toán:
+              </h4>
               <div className="grid grid-cols-2 gap-3">
                 <label
                   className={`flex items-center gap-2.5 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                    paymentMethod === 'payos_qr'
-                      ? 'border-sky-600 bg-sky-50 text-sky-950 font-bold'
-                      : 'border-slate-200 bg-white text-slate-700'
+                    paymentMethod === "payos_qr"
+                      ? "border-sky-600 bg-sky-50 text-sky-950 font-bold"
+                      : "border-slate-200 bg-white text-slate-700"
                   }`}
                 >
                   <input
                     type="radio"
                     name="payment_method"
                     value="payos_qr"
-                    checked={paymentMethod === 'payos_qr'}
-                    onChange={() => setPaymentMethod('payos_qr')}
+                    checked={paymentMethod === "payos_qr"}
+                    onChange={() => setPaymentMethod("payos_qr")}
                     className="accent-sky-600"
                   />
                   <QrCode className="w-4 h-4 text-sky-600 shrink-0" />
@@ -234,17 +271,17 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
 
                 <label
                   className={`flex items-center gap-2.5 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                    paymentMethod === 'zalo_contact'
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold'
-                      : 'border-slate-200 bg-white text-slate-700'
+                    paymentMethod === "zalo_contact"
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold"
+                      : "border-slate-200 bg-white text-slate-700"
                   }`}
                 >
                   <input
                     type="radio"
                     name="payment_method"
                     value="zalo_contact"
-                    checked={paymentMethod === 'zalo_contact'}
-                    onChange={() => setPaymentMethod('zalo_contact')}
+                    checked={paymentMethod === "zalo_contact"}
+                    onChange={() => setPaymentMethod("zalo_contact")}
                     className="accent-emerald-600"
                   />
                   <PhoneCall className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -256,9 +293,14 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
             {/* Total Cost Display & Submit */}
             <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
               <div>
-                <span className="text-xs text-slate-500 block">Tổng thanh toán:</span>
+                <span className="text-xs text-slate-500 block">
+                  Tổng thanh toán:
+                </span>
                 <span className="text-xl font-black text-sky-700">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(totalAmount)}
                 </span>
               </div>
               <button
@@ -266,7 +308,7 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 disabled={isSubmitting}
                 className="bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs px-6 py-3 rounded-full shadow-md transition-all cursor-pointer"
               >
-                {isSubmitting ? 'Đang khởi tạo...' : 'Xác Nhận Đặt Hàng ➔'}
+                {isSubmitting ? "Đang khởi tạo..." : "Xác Nhận Đặt Hàng"}
               </button>
             </div>
           </form>
@@ -297,24 +339,35 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 <div className="w-full bg-white p-4 rounded-2xl border border-slate-200 text-left text-xs space-y-2">
                   <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="text-slate-500">Mã đơn hàng:</span>
-                    <span className="font-mono font-bold text-slate-900">{createdOrder.orderCode}</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {createdOrder.orderCode}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="text-slate-500">Số tiền:</span>
                     <span className="font-black text-sky-700 text-sm">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(createdOrder.totalAmount)}
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(createdOrder.totalAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="text-slate-500">Ngân hàng:</span>
-                    <span className="font-bold text-slate-800">{qrData.bankName}</span>
+                    <span className="font-bold text-slate-800">
+                      {qrData.bankName}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-100">
                     <span className="text-slate-500">Số tài khoản:</span>
-                    <span className="font-mono font-bold text-slate-900">{qrData.accountNumber}</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {qrData.accountNumber}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-slate-500">Nội dung chuyển tiền:</span>
+                    <span className="text-slate-500">
+                      Nội dung chuyển tiền:
+                    </span>
                     <button
                       onClick={() => copyToClipboard(qrData.transferContent)}
                       className="font-mono font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200 flex items-center gap-1 hover:bg-sky-100 transition-colors"
@@ -326,7 +379,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 </div>
 
                 {copied && (
-                  <span className="text-[11px] font-bold text-emerald-600">Đã chép nội dung chuyển tiền!</span>
+                  <span className="text-[11px] font-bold text-emerald-600">
+                    Đã chép nội dung chuyển tiền!
+                  </span>
                 )}
               </div>
             )}
@@ -334,7 +389,9 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
             {/* Waiting Payment Live Pulse */}
             <div className="flex items-center justify-center gap-2 text-xs text-sky-800 font-semibold">
               <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-600" />
-              <span>Hệ thống tự động kiểm tra biến động số dư ngân hàng...</span>
+              <span>
+                Hệ thống tự động kiểm tra biến động số dư ngân hàng...
+              </span>
             </div>
 
             {/* Action Buttons */}
@@ -345,7 +402,7 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
                 rel="noopener noreferrer"
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-full transition-colors text-center shadow-xs"
               >
-                Gửi hình xác nhận qua Zalo ➔
+                Gửi hình xác nhận qua Zalo
               </a>
               <button
                 onClick={onClose}
@@ -358,7 +415,6 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
         )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
-

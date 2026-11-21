@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useCart } from '@/shared/context/CartContext';
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useCart } from "@/shared/context/CartContext";
 import {
   X,
   Trash2,
@@ -12,8 +12,8 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-} from 'lucide-react';
-import { CheckoutModal } from './CheckoutModal';
+} from "lucide-react";
+import { CheckoutModal } from "./CheckoutModal";
 
 export function CartDrawer() {
   const {
@@ -30,7 +30,7 @@ export function CartDrawer() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showNoteInput, setShowNoteInput] = useState(false);
-  const [orderNote, setOrderNote] = useState('');
+  const [orderNote, setOrderNote] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
@@ -57,18 +57,21 @@ export function CartDrawer() {
   // Close drawer on ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isCartOpen) {
+      if (e.key === "Escape" && isCartOpen) {
         handleCloseDrawer();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCartOpen]);
 
   if (!isCartOpen || !mounted) return null;
 
   const formatVND = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
   };
 
   const handleOpenCheckout = () => {
@@ -79,9 +82,9 @@ export function CartDrawer() {
 
   const handleExploreProducts = () => {
     handleCloseDrawer();
-    const el = document.getElementById('danh-sach-san-pham');
+    const el = document.getElementById("danh-sach-san-pham");
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      el.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -91,7 +94,7 @@ export function CartDrawer() {
         {/* Overlay Backdrop */}
         <div
           className={`fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
-            isAnimating ? 'opacity-100' : 'opacity-0'
+            isAnimating ? "opacity-100" : "opacity-0"
           }`}
           onClick={handleCloseDrawer}
         />
@@ -99,7 +102,7 @@ export function CartDrawer() {
         {/* Sliding Right Drawer Panel */}
         <div
           className={`relative w-full max-w-md bg-slate-50 h-full shadow-2xl z-[101] flex flex-col justify-between border-l border-slate-200 transition-transform duration-300 ease-out transform ${
-            isAnimating ? 'translate-x-0' : 'translate-x-full'
+            isAnimating ? "translate-x-0" : "translate-x-full"
           }`}
         >
           {/* Top Header - Solid Navy Minimalist */}
@@ -108,12 +111,16 @@ export function CartDrawer() {
               <ShoppingBag className="w-5 h-5 text-sky-200" />
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">Giỏ Hàng Của Bạn</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                    Giỏ Hàng Của Bạn
+                  </h3>
                   <span className="text-[11px] font-bold bg-sky-800 text-white px-2 py-0.5 rounded-full">
                     {totalItemsCount}
                   </span>
                 </div>
-                <p className="text-[11px] text-sky-300 font-medium">Mai Kim Tuyến Store</p>
+                <p className="text-[11px] text-sky-300 font-medium">
+                  Mai Kim Tuyến Store
+                </p>
               </div>
             </div>
             <button
@@ -134,7 +141,10 @@ export function CartDrawer() {
                   className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-all flex gap-3.5 items-start group"
                 >
                   <img
-                    src={item.product.images[0] || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600'}
+                    src={
+                      item.product.images[0] ||
+                      "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600"
+                    }
                     alt={item.product.title}
                     className="w-16 h-16 rounded-xl object-cover border border-slate-100 shrink-0"
                   />
@@ -155,7 +165,10 @@ export function CartDrawer() {
 
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-semibold text-slate-500">
-                        {formatVND(item.product.price)} <span className="text-slate-400">/ {item.product.unit}</span>
+                        {formatVND(item.product.price)}{" "}
+                        <span className="text-slate-400">
+                          / {item.product.unit}
+                        </span>
                       </span>
                     </div>
 
@@ -163,7 +176,9 @@ export function CartDrawer() {
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() =>
+                            updateQuantity(item.product.id, item.quantity - 1)
+                          }
                           className="p-1.5 text-slate-600 hover:bg-white transition-colors cursor-pointer"
                           title="Giảm số lượng"
                         >
@@ -173,7 +188,9 @@ export function CartDrawer() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() =>
+                            updateQuantity(item.product.id, item.quantity + 1)
+                          }
                           className="p-1.5 text-slate-600 hover:bg-white transition-colors cursor-pointer"
                           title="Tăng số lượng"
                         >
@@ -195,7 +212,9 @@ export function CartDrawer() {
                   <ShoppingBag className="w-8 h-8" />
                 </div>
                 <div className="space-y-1 max-w-xs mx-auto">
-                  <h4 className="font-bold text-sm text-slate-800 uppercase">Giỏ hàng của bạn đang trống</h4>
+                  <h4 className="font-bold text-sm text-slate-800 uppercase">
+                    Giỏ hàng của bạn đang trống
+                  </h4>
                   <p className="text-xs text-slate-500 font-medium">
                     Chưa có sản phẩm nào trong giỏ hàng.
                   </p>
@@ -204,7 +223,7 @@ export function CartDrawer() {
                   onClick={handleExploreProducts}
                   className="bg-sky-900 hover:bg-sky-950 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
                 >
-                  Khám Phá Sản Phẩm Ngay ➔
+                  Khám Phá Sản Phẩm Ngay
                 </button>
               </div>
             )}
@@ -220,7 +239,11 @@ export function CartDrawer() {
                     <FileText className="w-3.5 h-3.5 text-slate-500" />
                     Thêm ghi chú cho đơn hàng
                   </span>
-                  {showNoteInput ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {showNoteInput ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
                 </button>
                 {showNoteInput && (
                   <div className="mt-2 p-3 bg-white border border-slate-200 rounded-xl">
@@ -243,7 +266,9 @@ export function CartDrawer() {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between items-center text-slate-500 font-medium">
                   <span>Số lượng sản phẩm:</span>
-                  <span className="font-bold text-slate-800">{totalItemsCount} món</span>
+                  <span className="font-bold text-slate-800">
+                    {totalItemsCount} món
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-slate-500 font-medium">
                   <span>Vận chuyển:</span>
@@ -252,8 +277,12 @@ export function CartDrawer() {
                   </span>
                 </div>
                 <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Tổng Thanh Toán:</span>
-                  <span className="text-xl font-extrabold text-sky-950">{formatVND(subtotalAmount)}</span>
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Tổng Thanh Toán:
+                  </span>
+                  <span className="text-xl font-extrabold text-sky-950">
+                    {formatVND(subtotalAmount)}
+                  </span>
                 </div>
               </div>
 
@@ -270,7 +299,7 @@ export function CartDrawer() {
                   onClick={handleOpenCheckout}
                   className="flex-1 bg-sky-900 hover:bg-sky-950 text-white font-bold text-sm py-3 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  Tiến Hành Thanh Toán ➔
+                  Tiến Hành Thanh Toán
                 </button>
               </div>
             </div>
@@ -283,6 +312,6 @@ export function CartDrawer() {
         <CheckoutModal onClose={() => setIsCheckoutOpen(false)} />
       )}
     </>,
-    document.body
+    document.body,
   );
 }

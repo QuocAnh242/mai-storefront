@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { useStore } from '@/shared/context/StoreContext';
-import BlogSectionEditor from '@/features/admin/components/BlogSectionEditor';
+import React from "react";
+import { useRouter } from "next/navigation";
+import { useStore } from "@/shared/context/StoreContext";
+import BlogSectionEditor from "@/features/admin/blogs/BlogSectionEditor";
 
 export default function CreateBlogPostPage() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function CreateBlogPostPage() {
   const handleSave = async (postPayload: any) => {
     const res = await addBlogPost(postPayload);
     if (res.success) {
-      router.push('/admin/news');
+      router.push("/admin/news");
     }
   };
 

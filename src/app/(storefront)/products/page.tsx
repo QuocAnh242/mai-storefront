@@ -1,18 +1,41 @@
-'use client';
+import React, { Suspense } from 'react';
+import type { Metadata } from 'next';
+import { ProductCatalogView } from '@/features/catalog/ProductCatalogView';
+import { Loading } from '@/components/ui/Loading';
 
-import React from 'react';
-import { FeaturedProductsSection } from '@/features/storefront/FeaturedProductsSection';
+export const revalidate = 60; // ISR: 60s
+
+export const metadata: Metadata = {
+  title: 'Tất Cả Sản Phẩm - Bột Kim Tuyến, Bột Màu, Băng Keo Sỉ Lẻ',
+  description:
+    'Danh mục đầy đủ sản phẩm hạt nhũ Kim Tuyến, Bột Màu xây dựng & công nghiệp, Băng Keo dán thùng, Sơn Xịt, Keo Dán giá sỉ lẻ tốt nhất tại Chợ Lớn TP.HCM.',
+  alternates: {
+    canonical: 'https://www.maikimtuyen.io.vn/products',
+  },
+  openGraph: {
+    title: 'Tất Cả Sản Phẩm - Mai Kim Tuyến',
+    description: 'Kho sỉ lẻ Bột Kim Tuyến, Bột Màu, Băng Keo, Sơn Xịt, Keo Dán tại Chợ Lớn TP.HCM',
+    url: 'https://www.maikimtuyen.io.vn/products',
+    siteName: 'Mai Kim Tuyến Store',
+    locale: 'vi_VN',
+    type: 'website',
+  },
+};
 
 export default function SanPhamPage() {
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-sky-950 via-sky-900 to-sky-800 text-white p-8 rounded-3xl shadow-sm">
-        <h1 className="text-2xl sm:text-3xl font-black">Tất Cả Sản Phẩm Mai Store</h1>
-        <p className="text-xs sm:text-sm text-sky-100/90 mt-1">
-          Khám phá trọn bộ hạt nhũ Kim Tuyến, Bột Màu, Băng Keo, Sơn Xịt và Keo Dán thủ công chất lượng cao.
-        </p>
-      </div>
-      <FeaturedProductsSection />
-    </div>
+    <Suspense
+      fallback={
+        <div className="py-16 flex justify-center">
+          <Loading
+            size="lg"
+            text="Đang tải danh mục sản phẩm..."
+            subtext="Đang kết nối kho hàng và đồng bộ bảng giá mới nhất"
+          />
+        </div>
+      }
+    >
+      <ProductCatalogView />
+    </Suspense>
   );
 }

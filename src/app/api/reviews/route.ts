@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { supabase, supabaseAdmin, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
+import { enforceRateLimit } from '@/lib/rateLimit';
 import { sanitizeText } from '@/lib/sanitizer';
 import { moderateReviewContent } from '@/lib/aiModeration';
+import { CreateReviewSchema } from '@/lib/validation/schemas';
 
-const CreateReviewSchema = z.object({
-  productId: z.string().min(1, 'Thiếu thông tin sản phẩm'),
-  authorName: z.string().min(2, 'Tên người dùng tối thiểu 2 ký tự').max(50, 'Tên tối đa 50 ký tự'),
-  rating: z.number().int().min(1, 'Đánh giá tối thiểu 1').max(5, 'Đánh giá tối đa 5'),
-  content: z.string().min(5, 'Cảm nhận tối thiểu 5 ký tự').max(1000, 'Cảm nhận tối đa 1000 ký tự'),
-});
-
-// GET: Lấy danh sách đánh giá của sản phẩm
+// GET: Fetch product reviews
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -33,7 +26,7 @@ export async function GET(req: NextRequest) {
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
     const productKeys = [productId];
 
-    // Tra cứu xem productId có tương ứng với ID hoặc slug trong bảng sản phẩm không
+    // Resolve productId against both ID and slug columns in the products table
     try {
       const { data: prodMatch } = await client
         .from('products')
@@ -55,7 +48,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      // Nếu bảng chưa được khởi tạo trong Supabase
+      // Table not yet initialized in Supabase
       if (error.code === 'PGRST205' || error.message.includes('not find the table')) {
         return NextResponse.json({
           success: true,
@@ -97,12 +90,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Khách hàng gửi đánh giá mới
+// POST: Submit a new customer review
 export async function POST(req: NextRequest) {
   try {
-    // 1. IP Rate Limiting tổng thể: Tối đa 10 đánh giá trong 60 giây trên 1 IP
+    // 1. Global IP rate limit: max 10 reviews per 60s per IP
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`review_${clientIp}`, 10, 60);
+    const rateLimit = await enforceRateLimit(`review_${clientIp}`, 10, 60);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -130,8 +123,8 @@ export async function POST(req: NextRequest) {
 
     const { productId, authorName, rating, content } = parseResult.data;
 
-    // 3. Rate Limit chống spam cùng 1 sản phẩm: 20 giây giữa các lần gửi
-    const productRateLimit = checkRateLimit(`review_${productId}_${clientIp}`, 1, 20);
+    // 3. Per-product rate limit: 20s cooldown between submissions
+    const productRateLimit = await enforceRateLimit(`review_${productId}_${clientIp}`, 1, 20);
     if (!productRateLimit.allowed) {
       return NextResponse.json(
         {
@@ -142,7 +135,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Chặn spam link quảng cáo / link độc hại
+    // 4. Block spam/advertising/malicious links
     const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|vn|io|net|xyz|org|online|top))/i;
     if (urlPattern.test(content) || urlPattern.test(authorName)) {
       return NextResponse.json(
@@ -154,11 +147,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize input chống XSS
+    // Sanitize input against XSS
     const cleanAuthor = sanitizeText(authorName.trim());
     const cleanContent = sanitizeText(content.trim());
 
-    // 5. AI & Rule-based Moderation Engine: Đọc hiểu, phát hiện chửi thề & độc hại
+    // 5. AI & rule-based moderation: detect profanity and toxic content
     const moderation = await moderateReviewContent({
       authorName: cleanAuthor,
       content: cleanContent,
@@ -177,7 +170,7 @@ export async function POST(req: NextRequest) {
 
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
 
-    // Chuẩn hóa productId: nếu là slug thì chuyển về primary id sản phẩm để đồng bộ
+    // Normalize productId: resolve slug to primary product id
     let targetProductId = productId;
     try {
       const { data: prodMatch } = await client
@@ -200,7 +193,7 @@ export async function POST(req: NextRequest) {
           author_name: cleanAuthor,
           rating,
           content: cleanContent,
-          is_approved: moderation.isApproved, // Tự động duyệt nếu an toàn, tự động ẩn nếu độc hại/chửi thề
+          is_approved: moderation.isApproved, // Auto-approve if safe, auto-hide if toxic/profane
         })
         .select()
         .single();
@@ -234,7 +227,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Thông báo thân thiện cho khách hàng
+    // Customer-facing success message
     const successMsg = moderation.isApproved
       ? 'Cảm ơn bạn đã gửi đánh giá! Nhận xét của bạn đã được đăng thành công.'
       : 'Cảm ơn bạn đã gửi đánh giá! Nhận xét của bạn đang được tiếp nhận và sẽ sớm được hiển thị sau khi qua kiểm duyệt.';

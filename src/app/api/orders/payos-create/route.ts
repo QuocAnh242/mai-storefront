@@ -1,24 +1,13 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { checkRateLimit } from '@/lib/rateLimit';
+import { enforceRateLimit } from '@/lib/rateLimit';
 import { sanitizeText } from '@/lib/sanitizer';
-
-// Input Payload Validation Schema
-const CreateOrderSchema = z.object({
-  orderCode: z.number().or(z.string().regex(/^\d+$/).transform(Number)),
-  amount: z.number().min(1000, 'Số tiền tối thiểu 1.000đ'),
-  description: z.string().max(250).optional(),
-  customerName: z.string().optional(),
-  customerPhone: z.string().optional(),
-  returnUrl: z.string().url().optional(),
-  cancelUrl: z.string().url().optional(),
-});
+import { CreateOrderSchema } from '@/lib/validation/schemas';
 
 export async function POST(req: Request) {
   try {
-    // 1. IP Rate Limiting: 20 lần tạo đơn / 10 phút trên 1 IP
+    // 1. IP rate limiting: max 20 order creations per 10 minutes per IP
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-    const rateLimit = checkRateLimit(`create_order_${clientIp}`, 20, 600);
+    const rateLimit = await enforceRateLimit(`create_order_${clientIp}`, 20, 600);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(

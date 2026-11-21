@@ -1,541 +1,102 @@
-'use client';
+import React from 'react';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getProductBySlug, getRelatedProducts } from '@/lib/queries';
+import { ProductDetailView } from '@/features/products/ProductDetailView';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { useStore } from '@/shared/context/StoreContext';
-import { INITIAL_STORE_SETTINGS } from '@/shared/constants/initialData';
-import { ProductCard } from '@/features/products/ProductCard';
-import { findProductBySlugOrId } from '@/lib/productUrl';
-import { ProductReviews } from '@/features/products/ProductReviews';
-import { Loading } from '@/components/ui/Loading';
-import {
-  ShoppingBag,
-  ShieldCheck,
-  Truck,
-  ArrowLeft,
-  Share2,
-  CheckCircle2,
-  Phone,
-  MessageCircle,
-} from 'lucide-react';
+export const revalidate = 60; // ISR: 60 seconds
 
-export default function ProductDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const slugParam = params?.slug;
+interface PageProps {
+  params: Promise<{
+    slug: string[];
+  }>;
+}
 
-  const { products, isLoading } = useStore();
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
 
-  // Find product by id, number, category/number, or legacy slug
-  const product = findProductBySlugOrId(products, slugParam as string | string[]);
-
-  const [selectedImgIdx, setSelectedImgIdx] = useState(0);
-  const [activeTab, setActiveTab] = useState<'specs' | 'policy'>('specs');
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  // Track product view for analytics
-  React.useEffect(() => {
-    if (product) {
-      try {
-        fetch('/api/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'product_view',
-            productId: product.id,
-            productTitle: product.title,
-          }),
-        }).catch(() => {});
-      } catch {}
-    }
-  }, [product?.id, product?.title]);
-
-  const formatVND = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-  };
-
-  // 1. Loading UI state when data is being fetched
-  if (isLoading && !product) {
-    return (
-      <div className="max-w-7xl mx-auto space-y-8 py-8">
-        <div className="py-12 flex justify-center">
-          <Loading
-            size="lg"
-            text="Đang tải sản phẩm..."
-            subtext="Đang đồng bộ chi tiết sản phẩm và bảng giá mới nhất"
-          />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
-          <div className="lg:col-span-6 aspect-square bg-slate-100 rounded-3xl" />
-          <div className="lg:col-span-6 space-y-4">
-            <div className="h-4 bg-slate-200 rounded w-1/4" />
-            <div className="h-8 bg-slate-200 rounded w-3/4" />
-            <div className="h-6 bg-slate-200 rounded w-1/3" />
-            <div className="h-32 bg-slate-100 rounded-2xl" />
-            <div className="h-12 bg-slate-200 rounded-xl" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Only show Not Found if loading finished and product does not exist
   if (!product) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-          <ShoppingBag className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl font-bold text-slate-900">Không tìm thấy sản phẩm!</h2>
-        <p className="text-xs text-slate-500 max-w-sm">
-          Sản phẩm bạn đang tìm kiếm có thể đã bị ngưng kinh doanh hoặc đường dẫn không đúng.
-        </p>
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-2 bg-sky-950 text-white font-bold text-xs px-5 py-3 rounded-xl hover:bg-sky-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 text-sky-400" />
-          <span>Quay lại danh sách sản phẩm</span>
-        </Link>
-      </div>
-    );
+    return {
+      title: 'Không tìm thấy sản phẩm - Mai Kim Tuyến',
+    };
   }
 
-  const isContact = Boolean(product.isContactPrice || product.price <= 1);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.maikimtuyen.io.vn';
+  const pageUrl = `${siteUrl}/products/${Array.isArray(slug) ? slug.join('/') : slug}`;
+  const thumbnail = product.images?.[0] || `${siteUrl}/hero.jpg`;
 
-  const discountPercent =
-    !isContact && product.originalPrice && product.originalPrice > product.price
-      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-      : 0;
-
-  const images =
-    product.images && product.images.length > 0
-      ? product.images
-      : ['https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600'];
-
-  const relatedProducts = products
-    .filter((p) => p.categoryId === product.categoryId && p.id !== product.id)
-    .slice(0, 4);
-
-  const handleShare = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
-    }
+  return {
+    title: `${product.title} - Mai Kim Tuyến`,
+    description:
+      product.description ||
+      `Sản phẩm ${product.title} chất lượng cao, cung cấp sỉ lẻ tại Chợ Lớn TP.HCM bởi Mai Kim Tuyến.`,
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title: `${product.title} - Mai Kim Tuyến`,
+      description: product.description || `Cung cấp sỉ lẻ ${product.title} tại Chợ Lớn TP.HCM`,
+      url: pageUrl,
+      siteName: 'Mai Kim Tuyến Store',
+      images: [
+        {
+          url: thumbnail,
+          width: 800,
+          height: 800,
+          alt: product.title,
+        },
+      ],
+      locale: 'vi_VN',
+      type: 'website',
+    },
   };
+}
 
-  const zaloMessage = encodeURIComponent(
-    `Xin chào shop Mai Kim Tuyến, tôi muốn tư vấn báo giá sỉ cho sản phẩm: ${product.title} (${product.unit})`
-  );
+export default async function ProductPage({ params }: PageProps) {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    notFound();
+  }
+
+  const relatedProducts = await getRelatedProducts(product.id, product.categoryId, 4);
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.maikimtuyen.io.vn';
+  const productUrl = `${siteUrl}/products/${Array.isArray(slug) ? slug.join('/') : slug}`;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.title,
+    image: product.images && product.images.length > 0 ? product.images : [`${siteUrl}/hero.jpg`],
+    description: product.description || product.title,
+    sku: product.id,
+    brand: {
+      '@type': 'Brand',
+      name: 'Mai Kim Tuyến',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      priceCurrency: 'VND',
+      price: product.price > 1 ? product.price : 0,
+      availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      seller: {
+        '@type': 'Organization',
+        name: 'Mai Kim Tuyến Store',
+      },
+    },
+  };
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-20 sm:pb-12 animate-in fade-in duration-300">
-      
-      {/* ─── Breadcrumb Navigation & Back Button ─── */}
-      <div className="flex items-center justify-between gap-3 text-xs text-slate-500 pt-1 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap font-medium truncate">
-          <Link href="/" className="hover:text-sky-900 transition-colors">Trang Chủ</Link>
-          <span>/</span>
-          <Link href="/products" className="hover:text-sky-900 transition-colors">Sản Phẩm</Link>
-          <span>/</span>
-          <span className="text-slate-800 font-bold truncate max-w-[140px] sm:max-w-xs">{product.categoryName}</span>
-        </div>
-
-        <button
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-950 hover:text-sky-700 transition-colors cursor-pointer bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shrink-0"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Quay lại</span>
-        </button>
-      </div>
-
-      {/* ─── Main Product Container ─── */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200/90 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10">
-
-        {/* ── Left Column: Clean Image Gallery ── */}
-        <div className="lg:col-span-6 space-y-3 sm:space-y-4">
-          {/* Main Large Image */}
-          <div className="relative aspect-square bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
-            <img
-              src={images[selectedImgIdx]}
-              alt={product.title}
-              className="w-full h-full object-cover"
-            />
-
-            {discountPercent > 0 && (
-              <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
-                GIẢM {discountPercent}%
-              </span>
-            )}
-          </div>
-
-          {/* Thumbnails */}
-          {images.length > 1 && (
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImgIdx(idx)}
-                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 overflow-hidden shrink-0 cursor-pointer transition-all ${
-                    selectedImgIdx === idx
-                      ? 'border-sky-950 ring-2 ring-sky-200'
-                      : 'border-slate-200 opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Store Commitments (Desktop only, concise) */}
-          <div className="hidden sm:block bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2.5 text-xs text-slate-700">
-            <div className="flex items-center gap-2.5 font-semibold text-slate-800">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Hàng luôn có sẵn kho Trịnh Hoài Đức — Giao nhanh TP.HCM</span>
-            </div>
-            <div className="flex items-center gap-2.5 font-semibold text-slate-800">
-              <Truck className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>Hỗ trợ gửi chành xe đi các tỉnh thành toàn quốc</span>
-            </div>
-            <div className="flex items-center gap-2.5 font-semibold text-slate-800">
-              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Bao đổi trả nếu sản phẩm sai quy cách cam kết</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Right Column: Specs & Direct Inquiries ── */}
-        <div className="lg:col-span-6 flex flex-col justify-between space-y-5">
-          <div className="space-y-4">
-            
-            {/* Category tag & Share */}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-black text-sky-900 bg-sky-50 border border-sky-200/80 px-3 py-1 rounded-full uppercase tracking-wider">
-                {product.categoryName}
-              </span>
-
-              <button
-                onClick={handleShare}
-                className="text-xs font-semibold text-slate-500 hover:text-sky-950 flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                title="Chia sẻ link sản phẩm"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>{copiedLink ? 'Đã sao chép link!' : 'Chia sẻ'}</span>
-              </button>
-            </div>
-
-            {/* Product Title */}
-            <h1 className="text-xl sm:text-3xl font-black text-slate-900 leading-snug tracking-tight">
-              {product.title}
-            </h1>
-
-            {/* Availability & Unit */}
-            <div className="flex items-center gap-2.5 text-xs flex-wrap">
-              <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg">
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                Sẵn hàng tại kho
-              </span>
-              <span className="font-bold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">
-                Quy cách: {product.unit}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  const el = document.getElementById('product-reviews-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="font-bold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg transition-colors cursor-pointer"
-              >
-                Đánh giá khách hàng
-              </button>
-            </div>
-
-            {/* Clean High-Visibility Price Card */}
-            <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Giá bán niêm yết:
-              </span>
-              {isContact ? (
-                <div className="flex items-center gap-2 py-0.5">
-                  <span className="text-2xl sm:text-3xl font-black text-sky-700 tracking-tight">
-                    Liên hệ báo giá
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-2xl sm:text-3xl font-black text-sky-950 tracking-tight">
-                    {formatVND(product.price)}
-                  </span>
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="text-sm sm:text-base font-semibold text-slate-400 line-through">
-                      {formatVND(product.originalPrice)}
-                    </span>
-                  )}
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md">
-                      Tiết kiệm {formatVND(product.originalPrice - product.price)}
-                    </span>
-                  )}
-                </div>
-              )}
-              <p className="text-[11px] text-slate-500 mt-1 italic">
-                * Khách mua số lượng lớn hoặc đại lý vui lòng liên hệ trực tiếp để có giá sỉ chiết khấu tốt nhất.
-              </p>
-            </div>
-
-            {/* Quick Description */}
-            <div className="space-y-1.5 pt-1">
-              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Thông tin sản phẩm:</h4>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                {product.description || 'Sản phẩm chất lượng cao đến từ thương hiệu Mai Kim Tuyến. Phù hợp cho nhu cầu sản xuất, thủ công công nghiệp và trang trí mỹ thuật.'}
-              </p>
-            </div>
-
-          </div>
-
-          {/* Desktop Contact CTA Buttons */}
-          <div className="pt-4 border-t border-slate-100 space-y-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-              Liên hệ đặt mua &amp; báo giá sỉ:
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Zalo Button */}
-              <a
-                href={`https://zalo.me/${INITIAL_STORE_SETTINGS.zaloPhone}?text=${zaloMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-[#0068FF] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-              >
-                <span className="font-black text-xs uppercase bg-white/20 px-2 py-0.5 rounded">Zalo</span>
-                <span>Tư Vấn Báo Giá Qua Zalo</span>
-              </a>
-
-              {/* Hotline Call Button */}
-              <a
-                href={`tel:${INITIAL_STORE_SETTINGS.zaloPhone}`}
-                className="bg-sky-950 hover:bg-sky-900 text-white font-bold text-xs sm:text-sm py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-              >
-                <Phone className="w-4 h-4 text-white" />
-                <span>Gọi Hotline {INITIAL_STORE_SETTINGS.hotline}</span>
-              </a>
-            </div>
-
-            {/* Messenger */}
-            <a
-              href="https://m.me/chuyencungcapkimtuyensivale"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-slate-50 hover:bg-slate-100 text-sky-950 font-bold text-xs py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-200/80 cursor-pointer"
-            >
-              <MessageCircle className="w-4 h-4 text-blue-600" />
-              <span>Nhắn Tin Qua Messenger</span>
-            </a>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* ─── DESKTOP TABS VIEW (2 tabs: Thông số quy cách & Chính sách) ─── */}
-      <div className="hidden sm:block bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="flex border-b border-slate-200 bg-slate-50/80 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('specs')}
-            className={`px-5 py-3.5 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 shrink-0 ${
-              activeTab === 'specs'
-                ? 'border-sky-950 text-sky-950 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Thông Số &amp; Quy Cách
-          </button>
-          <button
-            onClick={() => setActiveTab('policy')}
-            className={`px-5 py-3.5 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 shrink-0 ${
-              activeTab === 'policy'
-                ? 'border-sky-950 text-sky-950 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Chính Sách Chành Xe &amp; Đổi Trả
-          </button>
-        </div>
-
-        <div className="p-5 sm:p-8 text-xs sm:text-sm text-slate-700 leading-relaxed">
-          {activeTab === 'specs' && (
-            <div className="max-w-xl space-y-3">
-              <h3 className="text-base font-black text-slate-900 mb-3">Thông số kỹ thuật</h3>
-              <div className="grid grid-cols-2 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-500">Tên sản phẩm:</span>
-                <span className="font-bold text-slate-900">{product.title}</span>
-                <span className="font-semibold text-slate-500">Danh mục:</span>
-                <span className="font-bold text-slate-900">{product.categoryName}</span>
-                <span className="font-semibold text-slate-500">Quy cách bán:</span>
-                <span className="font-bold text-slate-900">{product.unit}</span>
-                <span className="font-semibold text-slate-500">Tình trạng kho:</span>
-                <span className="font-bold text-emerald-700">Sẵn hàng tại kho TP.HCM</span>
-                <span className="font-semibold text-slate-500">Nhà cung cấp:</span>
-                <span className="font-bold text-slate-900">Cửa hàng Mai Kim Tuyến</span>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'policy' && (
-            <div className="space-y-4 max-w-3xl">
-              <h3 className="text-base font-black text-slate-900">Chính sách mua hàng &amp; Vận chuyển</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                  <h4 className="font-bold text-slate-900 text-xs uppercase flex items-center gap-1.5">
-                    <Truck className="w-4 h-4 text-sky-700" />
-                    Vận chuyển &amp; Chành Xe
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    Giao hàng nội thành TP.HCM nhanh chóng. Hỗ trợ đóng thùng cẩn thận gửi chành xe uy tín đi các tỉnh thành toàn quốc.
-                  </p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                  <h4 className="font-bold text-slate-900 text-xs uppercase flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-amber-600" />
-                    Đổi trả &amp; Bảo hành
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    Bao đổi trả miễn phí trong vòng 7 ngày nếu hàng gửi bị đổ vỡ, hư hỏng hoặc không đúng quy cách cam kết khi đặt mua.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ─── MOBILE VERTICAL SECTIONS VIEW (2 sections: Thông số quy cách & Chính sách) ─── */}
-      <div className="sm:hidden space-y-4">
-        {/* Section 1: Specifications Table */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2">
-            Thông Số &amp; Quy Cách
-          </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <span className="font-semibold text-slate-400">Tên sản phẩm:</span>
-            <span className="font-bold text-slate-900">{product.title}</span>
-            <span className="font-semibold text-slate-400">Danh mục:</span>
-            <span className="font-bold text-slate-900">{product.categoryName}</span>
-            <span className="font-semibold text-slate-400">Quy cách bán:</span>
-            <span className="font-bold text-slate-900">{product.unit}</span>
-            <span className="font-semibold text-slate-400">Tình trạng kho:</span>
-            <span className="font-bold text-emerald-700">Sẵn hàng tại TP.HCM</span>
-            <span className="font-semibold text-slate-400">Nhà cung cấp:</span>
-            <span className="font-bold text-slate-900">Cửa hàng Mai Kim Tuyến</span>
-          </div>
-        </div>
-
-        {/* Section 2: Shipping & Return Policy */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2">
-            Chính Sách Chành Xe &amp; Đổi Trả
-          </h3>
-          <div className="space-y-3 text-xs">
-            <div className="flex items-start gap-2.5">
-              <Truck className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
-              <div>
-                <h5 className="font-bold text-slate-900">Giao hàng &amp; Gửi chành xe:</h5>
-                <p className="text-slate-600 mt-0.5 leading-relaxed">
-                  Giao hỏa tốc nội thành TP.HCM trong ngày. Hỗ trợ đóng thùng cẩn thận gửi chành xe uy tín đi các tỉnh thành toàn quốc.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 pt-2 border-t border-slate-100">
-              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <h5 className="font-bold text-slate-900">Đổi trả &amp; Bảo hành:</h5>
-                <p className="text-slate-600 mt-0.5 leading-relaxed">
-                  Bao đổi trả miễn phí trong vòng 7 ngày nếu hàng gửi bị đổ vỡ, hư hỏng hoặc không đúng quy cách cam kết khi đặt mua.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── KHỐI ĐÁNH GIÁ & PHẢN HỒI KHÁCH HÀNG (DIV RIÊNG BIỆT Ở DƯỚI) ─── */}
-      <div
-        id="product-reviews-section"
-        className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-8 space-y-6 scroll-mt-6"
-      >
-        <div className="border-b border-slate-100 pb-4">
-          <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">
-            Đánh Giá &amp; Cảm Nhận Của Khách Hàng
-          </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            Đánh giá và cảm nhận thực tế từ khách hàng đã mua sản phẩm này
-          </p>
-        </div>
-
-        <ProductReviews
-          productId={product.id || product.slug}
-          productTitle={product.title}
-        />
-      </div>
-
-      {/* ─── Related Products Section (1 product per row on mobile) ─── */}
-      {relatedProducts.length > 0 && (
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-            <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">
-                Sản Phẩm Cùng Danh Mục
-              </h3>
-              <p className="text-xs text-slate-500">Các sản phẩm thuộc nhóm {product.categoryName}</p>
-            </div>
-            <Link
-              href="/products"
-              className="text-xs font-bold text-sky-900 hover:underline"
-            >
-              Xem tất cả →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
-            {relatedProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ─── MOBILE STICKY BOTTOM ACTION BAR (1-tap contact from anywhere on screen) ─── */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 shadow-2xl flex items-center justify-between gap-3">
-        <div className="truncate">
-          <span className="text-[10px] text-slate-400 block font-semibold leading-tight">Giá niêm yết:</span>
-          <span className="text-base font-black text-sky-950 leading-tight">
-            {formatVND(product.price)}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <a
-            href={`tel:${INITIAL_STORE_SETTINGS.zaloPhone}`}
-            className="w-10 h-10 rounded-xl bg-slate-100 active:bg-slate-200 text-sky-950 flex items-center justify-center border border-slate-200"
-            title="Gọi Hotline"
-          >
-            <Phone className="w-4 h-4 text-sky-950" />
-          </a>
-          <a
-            href={`https://zalo.me/${INITIAL_STORE_SETTINGS.zaloPhone}?text=${zaloMessage}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 rounded-xl bg-[#0068FF] active:bg-blue-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md"
-          >
-            <span className="font-black text-[10px] uppercase">Zalo</span>
-            <span>Báo Giá Sỉ</span>
-          </a>
-        </div>
-      </div>
-
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ProductDetailView initialProduct={product} initialRelatedProducts={relatedProducts} />
+    </>
   );
 }

@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin, isSupabaseConfigured, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { getSuperadminEmails, sendCleanupNoticeEmail } from '@/lib/emailService';
 
-// Cho phép Vercel chạy tối đa 30s cho tác vụ cron định kỳ
+// Allow Vercel up to 30s for the scheduled cron task
 export const maxDuration = 30;
 
 /**
- * Endpoint Cron Job:
- * 1. Chạy định kỳ mỗi ngày hoặc mỗi tuần.
- * 2. Trước 1 tuần (khi dữ liệu đạt mốc 23 ngày): Gửi email báo cáo & lịch dọn dẹp đến 3 Superadmin.
- * 3. Đến ngày 30: Tự động cộng dồn số view vào kho lưu trữ (analytics_archive) rồi xóa các dòng cũ hơn 30 ngày.
+ * Cron Job endpoint:
+ * 1. Runs daily or weekly.
+ * 2. At the 23-day mark (1 week ahead): send a report & cleanup schedule email to the 3 Superadmins.
+ * 3. At day 30: accumulate view counts into the archive table (analytics_archive), then delete rows older than 30 days.
  */
 export async function GET(req: NextRequest) {
   return handleCronJob(req);
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
 async function handleCronJob(req: NextRequest) {
   try {
-    // 1. Kiểm tra quyền thực thi (Bảo mật Vercel Cron Secret)
+    // 1. Verify execution permission (Vercel Cron Secret)
     const authHeader = req.headers.get('authorization');
     const { searchParams } = new URL(req.url);
     const secretKey = searchParams.get('key');
@@ -41,7 +41,7 @@ async function handleCronJob(req: NextRequest) {
     const client = (isSupabaseAdminConfigured() && supabaseAdmin) ? supabaseAdmin : supabase;
     const now = new Date();
 
-    // ── BƯỚC 1: LẤY THÔNG TIN KHO LƯU TRỮ (ANALYTICS_ARCHIVE) ──
+    // ── STEP 1: LOAD ARCHIVE STATE (ANALYTICS_ARCHIVE) ──
     let archiveRow: {
       archived_pageviews: number;
       archived_product_views: number;
@@ -69,7 +69,7 @@ async function handleCronJob(req: NextRequest) {
       };
     }
 
-    // ── BƯỚC 2: KIỂM TRA & GỬI EMAIL BÁO CÁO TRƯỚC 1 TUẦN (MỐC NGÀY 23) ──
+    // ── STEP 2: CHECK & SEND 1-WEEK-AHEAD REPORT EMAIL (23-DAY MARK) ──
     const twentyThreeDaysAgo = new Date(now.getTime() - 23 * 24 * 60 * 60 * 1000).toISOString();
     const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -77,19 +77,19 @@ async function handleCronJob(req: NextRequest) {
     let notificationSent = false;
     let notificationError = null;
 
-    // Kiểm tra xem đã gửi mail trong 20 ngày gần nhất chưa (để tránh spam mỗi ngày)
+    // Avoid repeat emails within the last 20 days (prevents daily spam)
     const recentlyNotified = archiveRow.last_notified_at && archiveRow.last_notified_at > twentyDaysAgo;
 
     if (!recentlyNotified) {
-      // Kiểm tra xem có bản ghi nào đã cũ hơn 23 ngày chưa
+      // Check whether any rows are older than 23 days
       const { count: agingViewsCount } = await client
         .from('site_pageviews')
         .select('*', { count: 'exact', head: true })
         .lte('created_at', twentyThreeDaysAgo);
 
-      // Nếu có bản ghi đạt mốc 23 ngày tuổi -> Đã đến hạn gửi email cảnh báo trước 1 tuần!
+      // Rows at the 23-day mark → time to send the 1-week-ahead notice
       if (agingViewsCount && agingViewsCount > 0) {
-        // 1. Thống kê số liệu 30 ngày qua
+        // 1. Aggregate stats for the last 30 days
         const { data: monthViewsData } = await client
           .from('site_pageviews')
           .select('visitor_id')
@@ -100,7 +100,7 @@ async function handleCronJob(req: NextRequest) {
           ? new Set(monthViewsData.map((r: any) => r.visitor_id).filter(Boolean)).size
           : 0;
 
-        // 2. Thống kê top 3 sản phẩm được xem nhiều nhất
+        // 2. Top 3 most-viewed products
         const { data: topProdData } = await client
           .from('product_views')
           .select('product_title')
@@ -117,14 +117,14 @@ async function handleCronJob(req: NextRequest) {
           .sort((a, b) => b.views - a.views)
           .slice(0, 3);
 
-        // 3. Tính ngày dọn dẹp dự kiến (sau đúng 7 ngày nữa)
+        // 3. Compute the planned cleanup date (exactly 7 days out)
         const cleanupTarget = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         const plannedCleanupDate = `${cleanupTarget.getDate().toString().padStart(2, '0')}/${(cleanupTarget.getMonth() + 1).toString().padStart(2, '0')}/${cleanupTarget.getFullYear()}`;
 
-        // 4. Lấy danh sách email Superadmin
+        // 4. Fetch Superadmin email list
         const superadminEmails = await getSuperadminEmails();
 
-        // 5. Gửi email thông báo
+        // 5. Send notification email
         const emailResult = await sendCleanupNoticeEmail({
           toEmails: superadminEmails,
           totalViewsLast30Days,
@@ -138,7 +138,7 @@ async function handleCronJob(req: NextRequest) {
           notificationError = emailResult.error;
         }
 
-        // Cập nhật mốc thời gian đã gửi thông báo vào database
+        // Persist the notification timestamp to the database
         if (emailResult.success) {
           await client.from('analytics_archive').upsert({
             id: 'global',
@@ -149,17 +149,17 @@ async function handleCronJob(req: NextRequest) {
       }
     }
 
-    // ── BƯỚC 3: DỌN DẸP DỮ LIỆU CŨ HƠN 30 NGÀY & CỘNG DỒN VÀO KHO LƯU TRỮ ──
+    // ── STEP 3: CLEAN UP ROWS OLDER THAN 30 DAYS & ACCUMULATE INTO ARCHIVE ──
     let cleanedPageviewsCount = 0;
     let cleanedProductViewsCount = 0;
 
-    // 1. Đếm số bản ghi pageviews cũ hơn 30 ngày
+    // 1. Count pageviews older than 30 days
     const { count: oldPvCount } = await client
       .from('site_pageviews')
       .select('*', { count: 'exact', head: true })
       .lt('created_at', thirtyDaysAgo);
 
-    // 2. Đếm số bản ghi product_views cũ hơn 30 ngày
+    // 2. Count product_views older than 30 days
     const { count: oldProdViewCount } = await client
       .from('product_views')
       .select('*', { count: 'exact', head: true })
@@ -168,9 +168,9 @@ async function handleCronJob(req: NextRequest) {
     cleanedPageviewsCount = oldPvCount || 0;
     cleanedProductViewsCount = oldProdViewCount || 0;
 
-    // Nếu có dữ liệu cũ hơn 30 ngày cần dọn dẹp
+    // Rows older than 30 days require cleanup
     if (cleanedPageviewsCount > 0 || cleanedProductViewsCount > 0) {
-      // A. Cộng dồn vào kho lưu trữ (archived_pageviews) để tổng view trên Admin Dashboard không bị giảm
+      // A. Accumulate into the archive (archived_pageviews) so Admin Dashboard totals stay stable
       const newArchivedPv = archiveRow.archived_pageviews + cleanedPageviewsCount;
       const newArchivedProdV = archiveRow.archived_product_views + cleanedProductViewsCount;
 
@@ -182,7 +182,7 @@ async function handleCronJob(req: NextRequest) {
         updated_at: now.toISOString(),
       });
 
-      // B. Xóa các bản ghi cũ hơn 30 ngày khỏi 2 bảng chi tiết
+      // B. Delete rows older than 30 days from both detail tables
       if (cleanedPageviewsCount > 0) {
         await client.from('site_pageviews').delete().lt('created_at', thirtyDaysAgo);
       }

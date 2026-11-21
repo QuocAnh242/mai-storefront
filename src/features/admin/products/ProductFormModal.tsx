@@ -195,7 +195,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[82vh] overflow-y-auto">
-          {/* 1. Tên sản phẩm */}
+          {/* 1. Product name */}
           <div>
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
               Tên sản phẩm (*)
@@ -211,7 +211,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
             />
           </div>
 
-          {/* 2. Giá bán, giá niêm yết, quy cách */}
+          {/* 2. Sale price, list price, unit */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -286,7 +286,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
             </div>
           </div>
 
-          {/* 3. Danh mục */}
+          {/* 3. Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
@@ -327,7 +327,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
             </div>
           </div>
 
-          {/* 4. Hình ảnh sản phẩm */}
+          {/* 4. Product images */}
           <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -447,7 +447,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
             )}
           </div>
 
-          {/* 5. Mô tả sản phẩm */}
+          {/* 5. Product description */}
           <div>
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
               Mô tả sản phẩm
@@ -461,7 +461,7 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
             />
           </div>
 
-          {/* 6. Tùy chọn trạng thái - Clean Modern Toggles */}
+          {/* 6. Status options - Clean Modern Toggles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
             <label className="flex items-center justify-between cursor-pointer">
               <span className="text-xs font-bold text-slate-800">Sản phẩm nổi bật</span>

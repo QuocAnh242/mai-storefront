@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
-import { X, Lock, Mail, Eye, EyeOff } from 'lucide-react';
-import { useToast } from '@/shared/context/ToastContext';
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { X, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/shared/context/ToastContext";
 
 interface AdminLoginModalProps {
   onClose: () => void;
@@ -13,10 +13,10 @@ interface AdminLoginModalProps {
 export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -28,12 +28,12 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
   // ESC key listener to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   if (!mounted) return null;
@@ -41,25 +41,27 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (attempts >= 15) {
-      setErrorMsg('Bạn đã thử sai quá 15 lần. Vui lòng đợi vài giây rồi thử lại!');
+      setErrorMsg(
+        "Bạn đã thử sai quá 15 lần. Vui lòng đợi vài giây rồi thử lại!",
+      );
       return;
     }
-    setErrorMsg('');
+    setErrorMsg("");
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        const msg = data.message || 'Tài khoản hoặc mật khẩu không chính xác';
+        const msg = data.message || "Tài khoản hoặc mật khẩu không chính xác";
         setErrorMsg(msg);
-        showToast(msg, 'error');
+        showToast(msg, "error");
         setLoading(false);
         setAttempts((prev) => prev + 1);
         return;
@@ -68,25 +70,25 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
       // Establish Client-Side Supabase Session for RLS queries
       if (data.session) {
         try {
-          const { supabase } = await import('@/lib/supabase');
+          const { supabase } = await import("@/lib/supabase");
           await supabase.auth.setSession({
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token,
           });
         } catch (clientErr) {
-          console.warn('Client auth sync notice:', clientErr);
+          console.warn("Client auth sync notice:", clientErr);
         }
       }
 
       // Successful JWT Login
-      showToast('Đăng nhập thành công! Chào mừng Quản trị viên', 'success');
+      showToast("Đăng nhập thành công! Chào mừng Quản trị viên", "success");
       onClose();
-      router.push('/admin');
+      router.push("/admin");
       router.refresh();
     } catch (err: any) {
-      const msg = err.message || 'Lỗi hệ thống đăng nhập';
+      const msg = err.message || "Lỗi hệ thống đăng nhập";
       setErrorMsg(msg);
-      showToast(msg, 'error');
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -117,22 +119,27 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
             alt="Mai Kim Tuyến Logo"
             className="w-14 h-14 rounded-full object-cover border-2 border-sky-100 mx-auto shadow-xs"
           />
-          <h3 className="text-xl font-black text-slate-900 uppercase">Đăng Nhập Quản Trị Viên</h3>
+          <h3 className="text-xl font-black text-slate-900 uppercase">
+            Đăng Nhập Quản Trị Viên
+          </h3>
           <p className="text-xs text-slate-500">
             Hệ thống quản lý cửa hàng Mai Kim Tuyến
           </p>
         </div>
 
         {errorMsg && (
-          <div className={`p-3.5 rounded-xl text-xs font-semibold border ${
-            errorMsg.includes('quá nhanh') || errorMsg.includes('nhiều lần')
-              ? 'bg-amber-50 border-amber-200 text-amber-800'
-              : 'bg-red-50 border-red-200 text-red-700'
-          }`}>
+          <div
+            className={`p-3.5 rounded-xl text-xs font-semibold border ${
+              errorMsg.includes("quá nhanh") || errorMsg.includes("nhiều lần")
+                ? "bg-amber-50 border-amber-200 text-amber-800"
+                : "bg-red-50 border-red-200 text-red-700"
+            }`}
+          >
             <p className="font-bold">{errorMsg}</p>
-            {errorMsg.includes('không chính xác') && (
+            {errorMsg.includes("không chính xác") && (
               <p className="text-[11px] text-red-600 mt-1 font-normal">
-                💡 Kiểm tra lại phím Caps Lock hoặc tắt bộ gõ tiếng Việt (Unikey/EVKey) khi gõ mật khẩu.
+                Lưu ý: Kiểm tra lại phím Caps Lock hoặc tắt bộ gõ tiếng Việt
+                (Unikey/EVKey) khi gõ mật khẩu.
               </p>
             )}
           </div>
@@ -164,7 +171,7 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
                 value={password}
@@ -175,9 +182,13 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 cursor-pointer transition-colors"
-                title={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                title={showPassword ? "Ẩn mật khẩu" : "Hiển thị mật khẩu"}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -187,12 +198,11 @@ export function AdminLoginModal({ onClose }: AdminLoginModalProps) {
             disabled={loading}
             className="w-full bg-sky-900 hover:bg-sky-950 text-white font-bold text-sm py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>{loading ? 'Đang xác thực...' : 'Đăng Nhập Dashboard ➔'}</span>
+            <span>{loading ? "Đang xác thực..." : "Đăng Nhập Dashboard"}</span>
           </button>
         </form>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
-

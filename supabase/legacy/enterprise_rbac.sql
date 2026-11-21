@@ -1,4 +1,4 @@
--- 1. Đảm bảo tất cả các bảng đều tồn tại trước khi thao tác policy
+-- 1. Ensure all tables exist before applying policies
 CREATE TABLE IF NOT EXISTS public.manual_revenues (
   id TEXT PRIMARY KEY,
   amount NUMERIC NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.admin_roles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Bật Row Level Security (RLS) trên toàn bộ các bảng
+-- 2. Enable RLS on all tables
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blogs ENABLE ROW LEVEL SECURITY;
@@ -29,12 +29,12 @@ ALTER TABLE public.admin_roles ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
-  -- Từ chối ngay nếu không có phiên đăng nhập (anon)
+  -- Deny anonymous requests immediately
   IF auth.role() != 'authenticated' THEN
     RETURN FALSE;
   END IF;
 
-  -- Nếu bảng admin_roles đã có bản ghi, kiểm tra quyền admin của user
+  -- If admin_roles has records, verify admin privileges
   IF EXISTS (SELECT 1 FROM public.admin_roles) THEN
     RETURN EXISTS (
       SELECT 1 FROM public.admin_roles 
@@ -43,12 +43,12 @@ BEGIN
     ) OR (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin');
   END IF;
 
-  -- Mặc định khởi tạo: Người dùng đã xác thực qua Supabase Auth đều được xem là Admin
+  -- Default bootstrap: any Supabase Auth user is treated as admin
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Xóa sạch tất cả các policy cũ để làm mới
+-- 4. Drop all existing policies for a clean slate
 DROP POLICY IF EXISTS "Public Read Categories" ON categories;
 DROP POLICY IF EXISTS "Public Insert Categories" ON categories;
 DROP POLICY IF EXISTS "Public Update Categories" ON categories;
@@ -80,9 +80,9 @@ DROP POLICY IF EXISTS "Admin All Revenues" ON manual_revenues;
 
 DROP POLICY IF EXISTS "Admin Manage Roles" ON public.admin_roles;
 
--- 5. Áp dụng chính sách Enterprise RBAC chuẩn bảo mật:
+-- 5. Apply enterprise-grade RBAC policies:
 
--- CATEGORIES: Khách xem, Admin quản lý
+-- CATEGORIES: public read, admin full access
 CREATE POLICY "Public Read Categories" ON categories
   FOR SELECT TO public
   USING (true);
@@ -92,7 +92,7 @@ CREATE POLICY "Admin All Categories" ON categories
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- PRODUCTS: Khách xem, Admin quản lý
+-- PRODUCTS: public read, admin full access
 CREATE POLICY "Public Read Products" ON products
   FOR SELECT TO public
   USING (true);
@@ -102,7 +102,7 @@ CREATE POLICY "Admin All Products" ON products
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- BLOGS: Khách xem bài đã xuất bản, Admin quản lý
+-- BLOGS: public reads published posts only, admin full access
 CREATE POLICY "Public Read Blogs" ON blogs
   FOR SELECT TO public
   USING (is_published = true);
@@ -112,7 +112,7 @@ CREATE POLICY "Admin All Blogs" ON blogs
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- ORDERS: Khách chỉ được tạo đơn hàng mới (INSERT). Không được đọc hay sửa xóa đơn của người khác!
+-- ORDERS: public can create orders only (INSERT); no read/update/delete for non-admins
 CREATE POLICY "Public Insert Orders" ON orders
   FOR INSERT TO public
   WITH CHECK (true);
@@ -122,13 +122,13 @@ CREATE POLICY "Admin All Orders" ON orders
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- MANUAL REVENUES: Chỉ Admin mới được truy cập dữ liệu tài chính
+-- MANUAL REVENUES: admin-only access to financial data
 CREATE POLICY "Admin All Revenues" ON manual_revenues
   FOR ALL TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- ADMIN ROLES: Chỉ Admin mới được xem/gán quyền
+-- ADMIN ROLES: admin-only view/assignment of roles
 CREATE POLICY "Admin Manage Roles" ON public.admin_roles
   FOR ALL TO authenticated
   USING (public.is_admin())

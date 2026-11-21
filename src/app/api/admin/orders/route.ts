@@ -1,34 +1,69 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
-import { verifyAdminAuth, applySessionCookies } from '@/lib/adminAuth';
+import { supabaseAdmin } from '@/lib/supabase';
+import { withAdminRoute, ok, fail } from '@/lib/api/withAdminRoute';
 
-// PATCH: Cập nhật trạng thái đơn hàng (Đã thanh toán / Chờ thanh toán / Thất bại)
-export async function PATCH(req: NextRequest) {
-  try {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`adm_ord_patch_${clientIp}`, 60, 60);
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
+// GET: Fetch orders with server-driven pagination and status filter
+export const GET = withAdminRoute(
+  { rateLimit: { key: 'adm_ord_get', limit: 120, windowSeconds: 60 }, requireServiceRole: false },
+  async ({ req, auth }) => {
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const pageSizeParam = searchParams.get('pageSize');
+    const isAll = pageSizeParam === 'all' || !searchParams.has('page');
+    const pageSize = isAll ? 500 : Math.max(1, Math.min(100, parseInt(pageSizeParam || '20', 10)));
+    const status = searchParams.get('status')?.trim();
+    const q = searchParams.get('q')?.trim();
+
+    let query = supabaseAdmin!
+      .from('orders')
+      .select('*', { count: 'exact' });
+
+    if (status && status !== 'all') {
+      query = query.eq('payment_status', status);
     }
 
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
+    if (q) {
+      query = query.or(`order_code.ilike.%${q}%,customer_name.ilike.%${q}%,customer_phone.ilike.%${q}%`);
     }
 
-    if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trên server' },
-        { status: 500 }
-      );
+    query = query.order('created_at', { ascending: false });
+
+    if (!isAll) {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
     }
 
+    const { data, count, error } = await query;
+    if (error) {
+      console.error('Supabase Orders Fetch Error:', error);
+      return fail(error.message, 500);
+    }
+
+    const total = count ?? (data?.length || 0);
+    const totalPages = isAll ? 1 : Math.max(1, Math.ceil(total / pageSize));
+
+    return ok(
+      {
+        data: data || [],
+        total,
+        page: isAll ? 1 : page,
+        pageSize: isAll ? total : pageSize,
+        totalPages,
+      },
+      { newSession: auth.newSession },
+    );
+  },
+);
+
+// PATCH: Update order payment status (paid / pending / failed)
+export const PATCH = withAdminRoute(
+  { rateLimit: { key: 'adm_ord_patch', limit: 60, windowSeconds: 60 } },
+  async ({ req, auth }) => {
     const body = await req.json();
     const { orderCode, status } = body;
 
     if (!orderCode) {
-      return NextResponse.json({ error: 'Thiếu mã đơn hàng' }, { status: 400 });
+      return fail('Thiếu mã đơn hàng', 400);
     }
 
     const updatePayload: Record<string, any> = {
@@ -38,7 +73,7 @@ export async function PATCH(req: NextRequest) {
       updatePayload.paid_at = new Date().toISOString();
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin!
       .from('orders')
       .update(updatePayload)
       .eq('order_code', orderCode)
@@ -47,69 +82,45 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       console.error('Supabase Order Update Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return fail(error.message, 500);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: 'Cập nhật trạng thái đơn hàng thành công',
-      data,
-    });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({ data }, { message: 'Cập nhật trạng thái đơn hàng thành công', newSession: auth.newSession });
+  },
+);
 
-// DELETE: Xóa đơn hàng chưa thanh toán
-export async function DELETE(req: NextRequest) {
-  try {
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
-    if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trên server' },
-        { status: 500 }
-      );
-    }
-
+// DELETE: Remove an unpaid order
+export const DELETE = withAdminRoute(
+  {},
+  async ({ req, auth }) => {
     const { searchParams } = new URL(req.url);
     const orderCode = searchParams.get('orderCode');
 
     if (!orderCode) {
-      return NextResponse.json({ error: 'Thiếu mã đơn hàng cần xóa' }, { status: 400 });
+      return fail('Thiếu mã đơn hàng cần xóa', 400);
     }
 
-    // Kiểm tra đơn hàng có trong trạng thái đã thanh toán không
-    const { data: existingOrder } = await supabaseAdmin
+    // Reject deletion of paid orders
+    const { data: existingOrder } = await supabaseAdmin!
       .from('orders')
       .select('payment_status')
       .eq('order_code', orderCode)
       .maybeSingle();
 
     if (existingOrder && existingOrder.payment_status === 'paid') {
-      return NextResponse.json({ error: 'Không thể xóa đơn hàng đã thanh toán' }, { status: 400 });
+      return fail('Không thể xóa đơn hàng đã thanh toán', 400);
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabaseAdmin!
       .from('orders')
       .delete()
       .eq('order_code', orderCode);
 
     if (error) {
       console.error('Supabase Order Delete Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return fail(error.message, 500);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: `Đã xóa đơn ${orderCode} thành công`,
-    });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({}, { message: `Đã xóa đơn ${orderCode} thành công`, newSession: auth.newSession });
+  },
+);

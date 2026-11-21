@@ -1,69 +1,39 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
+import Link from 'next/link';
 import { useStore } from '@/shared/context/StoreContext';
 import { ProductCard } from '../products/ProductCard';
 import { Loading, ProductGridSkeleton } from '@/components/ui/Loading';
+import { CategoryScrollBar } from './CategoryScrollBar';
+import { StorefrontCategorySection } from './StorefrontCategorySection';
 
 export function FeaturedProductsSection() {
-  const { products, featuredProducts, selectedCategory, setSelectedCategory, searchQuery, categories, isLoading } = useStore();
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftRef = useRef(0);
-  const hasMovedRef = useRef(false);
-
-  // Convert vertical mouse wheel to horizontal scroll when hovering over the category bar
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-
-    const onWheel = (e: WheelEvent) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        el.scrollLeft += e.deltaY;
-      }
-    };
-
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
-
-  // Mouse drag-to-scroll handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!scrollContainerRef.current) return;
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current || !scrollContainerRef.current) return;
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = x - startXRef.current;
-    if (Math.abs(walk) > 4) {
-      hasMovedRef.current = true;
-    }
-    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
-  };
-
-  const handleMouseUpOrLeave = () => {
-    isDraggingRef.current = false;
-  };
+  const {
+    products,
+    featuredProducts,
+    selectedCategory,
+    setSelectedCategory,
+    searchQuery,
+    categories,
+    isLoading,
+  } = useStore();
 
   const handleCategoryClick = (catId: string | null) => {
-    if (hasMovedRef.current) {
-      hasMovedRef.current = false;
-      return; // If user was dragging, don't trigger button click!
-    }
     setSelectedCategory(catId);
+    if (catId !== null) {
+      const el = document.getElementById('danh-sach-san-pham');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   };
 
   // Active filter logic
   const filteredProducts = products.filter((p) => {
-    const matchesCat = selectedCategory ? p.categoryId === selectedCategory : true;
+    const matchesCat = selectedCategory
+      ? p.categoryId === selectedCategory
+      : true;
     const matchesSearch = searchQuery
       ? p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.categoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -74,19 +44,31 @@ export function FeaturedProductsSection() {
 
   const isFiltering = Boolean(selectedCategory || searchQuery);
 
-  // Section Group 1: Bột Kim Tuyến & Các Loại Bột Màu
-  const powderCategoryIds = ['cat-kim-tuyen', 'cat-camay', 'cat-da-quang', 'cat-phan-quang', 'cat-bot-mau'];
-  const powderProducts = products.filter((p) => powderCategoryIds.includes(p.categoryId));
+  // Section Group 1: glitter powder & color powders
+  const powderCategoryIds = [
+    'cat-kim-tuyen',
+    'cat-camay',
+    'cat-da-quang',
+    'cat-phan-quang',
+    'cat-bot-mau',
+  ];
+  const powderProducts = products.filter((p) =>
+    powderCategoryIds.includes(p.categoryId)
+  );
 
-  // Section Group 2: Băng Keo, Sơn Xịt & Keo Dán
+  // Section Group 2: adhesive tape, spray paint & glue
   const adhesiveCategoryIds = ['cat-bang-keo', 'cat-son-xit', 'cat-keo-dan'];
-  const adhesiveProducts = products.filter((p) => adhesiveCategoryIds.includes(p.categoryId));
+  const adhesiveProducts = products.filter((p) =>
+    adhesiveCategoryIds.includes(p.categoryId)
+  );
 
-  // Section Group 3: Xi Đánh Giày
+  // Section Group 3: shoe polish
   const shoePolishCategoryIds = ['cat-xi-giay'];
-  const shoePolishProducts = products.filter((p) => shoePolishCategoryIds.includes(p.categoryId));
+  const shoePolishProducts = products.filter((p) =>
+    shoePolishCategoryIds.includes(p.categoryId)
+  );
 
-  // Section Group 4: Vật Tư Khác
+  // Section Group 4: other supplies
   const otherProducts = products.filter(
     (p) =>
       !powderCategoryIds.includes(p.categoryId) &&
@@ -111,62 +93,27 @@ export function FeaturedProductsSection() {
 
   return (
     <div id="danh-sach-san-pham" className="space-y-12 py-4">
-      {/* Clean Category Filter Bar with Drag & Wheel Scroll Affordance */}
-      <div
-        className="relative bg-white p-2.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs group"
-        onMouseLeave={handleMouseUpOrLeave}
-      >
-        <div
-          ref={scrollContainerRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUpOrLeave}
-          className="flex items-center gap-2 sm:gap-3 overflow-x-auto scrollbar-none py-1 pr-8 sm:pr-4 scroll-smooth cursor-grab active:cursor-grabbing select-none"
-        >
-          <span className="hidden sm:inline font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wide shrink-0 pointer-events-none">
-            Danh Mục:
-          </span>
+      {/* 1. Category Filter Bar (Original Design & Scroll Affordance) */}
+      <CategoryScrollBar
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={handleCategoryClick}
+      />
 
-          <button
-            onClick={() => handleCategoryClick(null)}
-            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 select-none ${
-              selectedCategory === null
-                ? 'bg-sky-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95'
-            }`}
-          >
-            Tất cả sản phẩm
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryClick(cat.id)}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 select-none ${
-                selectedCategory === cat.id
-                  ? 'bg-sky-950 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Right Fade Edge for scroll affordance */}
-        <div className="pointer-events-none absolute right-1.5 top-1.5 bottom-1.5 w-8 sm:w-12 bg-gradient-to-l from-white via-white/80 to-transparent rounded-r-xl" />
-      </div>
-
-      {/* FILTER SEARCH OR CATEGORY MODE */}
+      {/* 2. FILTER SEARCH OR CATEGORY MODE */}
       {isFiltering ? (
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 {selectedCategory
-                  ? categories.find((c) => c.id === selectedCategory)?.name || 'Sản phẩm'
+                  ? categories.find((c) => c.id === selectedCategory)?.name ||
+                    'Sản phẩm'
                   : `Kết quả tìm kiếm: "${searchQuery}"`}
               </h2>
-              <p className="text-xs text-slate-500 mt-1">Hiển thị {filteredProducts.length} sản phẩm phù hợp</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Hiển thị {filteredProducts.length} sản phẩm phù hợp
+              </p>
             </div>
             <button
               onClick={() => setSelectedCategory(null)}
@@ -184,152 +131,107 @@ export function FeaturedProductsSection() {
             </div>
           ) : (
             <div className="text-center py-16 bg-slate-50 rounded-2xl border border-slate-200">
-              <p className="text-sm font-medium text-slate-500">Chưa có sản phẩm nào trong danh mục này.</p>
+              <p className="text-sm font-medium text-slate-500">
+                Chưa có sản phẩm nào trong danh mục này.
+              </p>
             </div>
           )}
         </section>
       ) : (
-        /* STANDARD 4 MAIN SECTIONS STOREFRONT DISPLAY */
+        /* 3. COMPACT CATEGORY OVERVIEW (4 ITEMS PER SECTION) */
         <div className="space-y-14">
-          {/* Section 0: Featured Products (If Admin marked any featured) */}
+          {/* Section 0: Featured Products */}
           {featuredProducts.length > 0 && (
-            <section className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-6">
+            <section className="space-y-5">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Sản Phẩm Nổi Bật</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Danh sách các mặt hàng bán chạy được chọn lọc</p>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    Sản phẩm nổi bật
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Mặt hàng bán chạy, giá sỉ rõ ràng – bấm để nhận báo giá qua
+                    Zalo
+                  </p>
                 </div>
-                <span className="text-xs font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-full">
-                  {featuredProducts.length} nổi bật
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-full">
+                    {featuredProducts.length} nổi bật
+                  </span>
+                  {featuredProducts.length > 4 && (
+                    <Link
+                      href="/products"
+                      className="hidden sm:inline-block text-xs font-bold text-sky-900 hover:underline ml-1"
+                    >
+                      Xem tất cả →
+                    </Link>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
-                {featuredProducts.map((product) => (
+                {featuredProducts.slice(0, 4).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
+
+              {featuredProducts.length > 4 && (
+                <div className="flex justify-center pt-2">
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-98 transition-all"
+                  >
+                    Xem thêm {featuredProducts.length - 4} sản phẩm nổi bật →
+                  </Link>
+                </div>
+              )}
             </section>
           )}
 
-          {/* Section 1: Bột Kim Tuyến & Các Loại Bột Màu */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between border-b-2 border-sky-950 pb-3">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
-                  Bột Kim Tuyến & Các Loại Bột Màu
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Bột kim tuyến, Bột Camay, Bột Dạ Quang, Bột Phản Quang, Bột Màu Xây Dựng
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full shrink-0">
-                {powderProducts.length} sản phẩm
-              </span>
-            </div>
+          {/* Section 1: glitter powder & color powders */}
+          <StorefrontCategorySection
+            title="Bột Kim Tuyến & Các Loại Bột Màu"
+            subtitle="Bột kim tuyến, Bột Camay, Bột Dạ Quang, Bột Phản Quang, Bột Màu Xây Dựng"
+            products={powderProducts}
+            maxDisplay={4}
+            onViewMore={() => handleCategoryClick('cat-kim-tuyen')}
+            viewMoreLabel="sản phẩm Bột Kim Tuyến & Bột Màu"
+            emptyText="Đang cập nhật danh mục Bột Kim Tuyến & Bột Màu..."
+          />
 
-            {powderProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
-                {powderProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-xs text-slate-400">Đang cập nhật danh mục Bột Kim Tuyến & Bột Màu...</p>
-              </div>
-            )}
-          </section>
+          {/* Section 2: adhesive tape, spray paint & glue */}
+          <StorefrontCategorySection
+            title="Băng Keo, Sơn Xịt & Keo Dán Chuyên Dụng"
+            subtitle="Băng keo dán thùng, Sơn xịt ATM/Samurai, Keo con chó Dog X66, Keo 502"
+            products={adhesiveProducts}
+            maxDisplay={4}
+            onViewMore={() => handleCategoryClick('cat-bang-keo')}
+            viewMoreLabel="sản phẩm Băng Keo, Sơn Xịt & Keo Dán"
+            emptyText="Đang cập nhật danh mục Băng Keo, Sơn Xịt & Keo Dán..."
+          />
 
-          {/* Section 2: Băng Keo, Sơn Xịt & Keo Dán */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between border-b-2 border-sky-950 pb-3">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
-                  Băng Keo, Sơn Xịt & Keo Dán Chuyên Dụng
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Băng keo dán thùng, Sơn xịt ATM/Samurai, Keo con chó Dog X66, Keo 502
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full shrink-0">
-                {adhesiveProducts.length} sản phẩm
-              </span>
-            </div>
+          {/* Section 3: shoe polish */}
+          <StorefrontCategorySection
+            title="Xi Đánh Giày & Bảo Vệ Đồ Da"
+            subtitle="Xi Thái Kleen, Xi Aromax, Xi Ximo, Xi Starwax, Xi CF"
+            products={shoePolishProducts}
+            maxDisplay={4}
+            onViewMore={() => handleCategoryClick('cat-xi-giay')}
+            viewMoreLabel="sản phẩm Xi Đánh Giày"
+            emptyText="Đang cập nhật danh mục Xi Đánh Giày..."
+          />
 
-            {adhesiveProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
-                {adhesiveProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-xs text-slate-400">Đang cập nhật danh mục Băng Keo, Sơn Xịt & Keo Dán...</p>
-              </div>
-            )}
-          </section>
-
-          {/* Section 3: Xi Đánh Giày */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between border-b-2 border-sky-950 pb-3">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
-                  Xi Đánh Giày & Bảo Vệ Đồ Da
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Xi Thái Kleen, Xi Aromax, Xi Ximo, Xi Starwax, Xi CF
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full shrink-0">
-                {shoePolishProducts.length} sản phẩm
-              </span>
-            </div>
-
-            {shoePolishProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
-                {shoePolishProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-xs text-slate-400">Đang cập nhật danh mục Xi Đánh Giày...</p>
-              </div>
-            )}
-          </section>
-
-          {/* Section 4: Dụng Cụ & Vật Tư Khác */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between border-b-2 border-sky-950 pb-3">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
-                  Dụng Cụ Đóng Gói & Vật Tư Khác
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Cắt băng keo cầm tay, Máy bắn giá tiền & phụ kiện vật tư
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full shrink-0">
-                {otherProducts.length} sản phẩm
-              </span>
-            </div>
-
-            {otherProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3.5 gap-y-6 sm:gap-6">
-                {otherProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-xs text-slate-400">Đang cập nhật các vật tư khác...</p>
-              </div>
-            )}
-          </section>
+          {/* Section 4: packing tools & other supplies */}
+          <StorefrontCategorySection
+            title="Dụng Cụ Đóng Gói & Vật Tư Khác"
+            subtitle="Cắt băng keo cầm tay, Máy bắn giá tiền & phụ kiện vật tư"
+            products={otherProducts}
+            maxDisplay={4}
+            onViewMore={() => handleCategoryClick(null)}
+            viewMoreLabel="vật tư khác"
+            emptyText="Đang cập nhật các vật tư khác..."
+          />
         </div>
       )}
     </div>
   );
 }
-

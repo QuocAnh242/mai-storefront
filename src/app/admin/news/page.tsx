@@ -1,10 +1,18 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { useStore } from '@/shared/context/StoreContext';
-import { Newspaper, Plus, Trash2, Edit, Tag, Layers, ExternalLink } from 'lucide-react';
-import { Loading } from '@/components/ui/Loading';
+import React from "react";
+import Link from "next/link";
+import { useStore } from "@/shared/context/StoreContext";
+import {
+  Newspaper,
+  Plus,
+  Trash2,
+  Edit,
+  Tag,
+  Layers,
+  ExternalLink,
+} from "lucide-react";
+import { Loading } from "@/components/ui/Loading";
 
 export default function AdminTinTucPage() {
   const { blogs, deleteBlogPost, isLoading } = useStore();
@@ -19,7 +27,8 @@ export default function AdminTinTucPage() {
             <span>Quản Lý Bài Viết & Tin Tức Shop</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Trình soạn thảo chuyên nghiệp theo Section (Phân đoạn 1, 2, 3...) hỗ trợ chèn quảng cáo và xem trước thời gian thực.
+            Trình soạn thảo chuyên nghiệp theo Section (Phân đoạn 1, 2, 3...) hỗ
+            trợ chèn quảng cáo và xem trước thời gian thực.
           </p>
         </div>
 
@@ -57,14 +66,14 @@ export default function AdminTinTucPage() {
                     className="w-24 h-24 object-cover rounded-xl border border-slate-200 shrink-0 bg-slate-100"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
-                        'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600';
+                        "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600";
                     }}
                   />
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-extrabold uppercase text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-100 flex items-center gap-1">
                         <Tag className="w-2.5 h-2.5" />
-                        {post.category || 'Mẹo hay'}
+                        {post.category || "Mẹo hay"}
                       </span>
                       {sectionCount > 0 && (
                         <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1">
@@ -73,8 +82,12 @@ export default function AdminTinTucPage() {
                         </span>
                       )}
                     </div>
-                    <h3 className="font-bold text-slate-900 text-sm line-clamp-2 mt-0.5">{post.title}</h3>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{post.summary}</p>
+                    <h3 className="font-bold text-slate-900 text-sm line-clamp-2 mt-0.5">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">
+                      {post.summary}
+                    </p>
                   </div>
                 </div>
 
@@ -104,7 +117,7 @@ export default function AdminTinTucPage() {
                     <button
                       type="button"
                       onClick={async () => {
-                        if (confirm('Xóa bài viết này khỏi hệ thống?')) {
+                        if (confirm("Xóa bài viết này khỏi hệ thống?")) {
                           await deleteBlogPost(post.id);
                         }
                       }}
@@ -125,9 +138,12 @@ export default function AdminTinTucPage() {
             <Newspaper className="w-8 h-8" />
           </div>
           <div className="max-w-md mx-auto">
-            <h3 className="font-bold text-slate-900 text-base">Chưa có bài viết nào</h3>
+            <h3 className="font-bold text-slate-900 text-base">
+              Chưa có bài viết nào
+            </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Dữ liệu tin tức đã được làm sạch. Bấm vào nút bên dưới để tạo bài viết chuyên nghiệp đầu tiên với các phân đoạn Section 1, 2, 3!
+              Dữ liệu tin tức đã được làm sạch. Bấm vào nút bên dưới để tạo bài
+              viết chuyên nghiệp đầu tiên với các phân đoạn Section 1, 2, 3!
             </p>
           </div>
           <Link

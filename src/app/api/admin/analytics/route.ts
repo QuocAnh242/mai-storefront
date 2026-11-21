@@ -1,32 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { getLiveAnalyticsSummary } from "@/lib/analyticsStore";
-import { checkRateLimit } from "@/lib/rateLimit";
-import { verifyAdminAuth, applySessionCookies } from "@/lib/adminAuth";
+import { withAdminRoute } from "@/lib/api/withAdminRoute";
+import { applySessionCookies } from "@/lib/adminAuth";
 
-export async function GET(req: NextRequest) {
-  try {
-    // 0. IP Rate Limiting: Max 60 requests per minute per IP
-    const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    const rateLimit = checkRateLimit(`analytics_${clientIp}`, 180, 60);
-
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: "RATE_LIMIT_EXCEEDED",
-          message: "Quá nhiều yêu cầu tải dữ liệu thống kê",
-        },
-        { status: 429 },
-      );
-    }
-
-    // 1. Admin Authentication Check
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: "UNAUTHORIZED", message: "Yêu cầu quyền Quản trị viên" }, { status: 401 });
-    }
-
+// GET: Analytics summary (DB-backed with in-memory fallback)
+export const GET = withAdminRoute(
+  {
+    // Rate limit: 180 requests per 60s per IP
+    rateLimit: { key: "analytics", limit: 180, windowSeconds: 60 },
+    requireServiceRole: false,
+  },
+  async ({ auth }) => {
     let todayViews = 0;
     let todayVisitors = 0;
     let totalTrackedViews = 0;
@@ -40,7 +25,7 @@ export async function GET(req: NextRequest) {
     let dbConnected = false;
     let requiresTableSetup = false;
 
-    // 2. Query directly from Supabase Cloud Database (Parallelized for Ultra-Fast Loading)
+    // Query directly from Supabase Cloud Database (Parallelized for Ultra-Fast Loading)
     if (isSupabaseConfigured()) {
       const dbClient = supabaseAdmin || supabase;
       try {
@@ -184,7 +169,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. Fallback to transient memory buffer if tables aren't set up yet
+    // Fallback to transient memory buffer if tables aren't set up yet
     if (requiresTableSetup || !dbConnected) {
       const live = getLiveAnalyticsSummary();
       todayViews = Math.max(todayViews, live.todayViews);
@@ -221,8 +206,6 @@ export async function GET(req: NextRequest) {
         },
       },
     );
-    return applySessionCookies(response, authResult.newSession);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+    return applySessionCookies(response, auth.newSession);
+  },
+);

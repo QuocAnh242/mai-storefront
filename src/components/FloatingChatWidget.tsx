@@ -73,7 +73,7 @@ export function FloatingChatWidget() {
               </div>
             </a>
 
-            {/* 3. Hotline Trực Tiếp (Hỗ trợ 3 số tinh tế) */}
+            {/* 3. Direct hotlines (elegant 3-number layout) */}
             <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 text-slate-800 shadow-2xs space-y-1.5">
               <div className="flex items-center gap-2 px-0.5">
                 <div className="w-7 h-7 rounded-full bg-sky-950 flex items-center justify-center text-white shrink-0 shadow-xs">

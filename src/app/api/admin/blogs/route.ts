@@ -1,29 +1,65 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
-import { verifyAdminAuth, applySessionCookies } from '@/lib/adminAuth';
+import { supabaseAdmin } from '@/lib/supabase';
+import { withAdminRoute, ok, fail } from '@/lib/api/withAdminRoute';
+import { generateEntityId } from '@/lib/ids';
 
-// POST: Tạo bài viết mới
-export async function POST(req: NextRequest) {
-  try {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`adm_blog_create_${clientIp}`, 60, 60);
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429 });
+// GET: Fetch blogs with server pagination and filtering
+export const GET = withAdminRoute(
+  { rateLimit: { key: 'adm_blog_get', limit: 120, windowSeconds: 60 }, requireServiceRole: false },
+  async ({ req, auth }) => {
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const pageSizeParam = searchParams.get('pageSize');
+    const isAll = pageSizeParam === 'all' || !searchParams.has('page');
+    const pageSize = isAll ? 500 : Math.max(1, Math.min(100, parseInt(pageSizeParam || '20', 10)));
+    const q = searchParams.get('q')?.trim();
+    const category = searchParams.get('category')?.trim();
+
+    let query = supabaseAdmin!
+      .from('blogs')
+      .select('*', { count: 'exact' });
+
+    if (category && category !== 'all') {
+      query = query.eq('category', category);
     }
 
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
+    if (q) {
+      query = query.or(`title.ilike.%${q}%,summary.ilike.%${q}%,author.ilike.%${q}%`);
     }
 
-    if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trên server' },
-        { status: 500 }
-      );
+    query = query.order('created_at', { ascending: false });
+
+    if (!isAll) {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
     }
 
+    const { data, count, error } = await query;
+    if (error) {
+      console.error('Supabase Blog Fetch Error:', error);
+      return fail(error.message, 500);
+    }
+
+    const total = count ?? (data?.length || 0);
+    const totalPages = isAll ? 1 : Math.max(1, Math.ceil(total / pageSize));
+
+    return ok(
+      {
+        data: data || [],
+        total,
+        page: isAll ? 1 : page,
+        pageSize: isAll ? total : pageSize,
+        totalPages,
+      },
+      { newSession: auth.newSession },
+    );
+  },
+);
+
+// POST: Create a new blog post
+export const POST = withAdminRoute(
+  { rateLimit: { key: 'adm_blog_create', limit: 60, windowSeconds: 60 } },
+  async ({ req, auth }) => {
     const body = await req.json();
     const {
       id,
@@ -39,10 +75,10 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!title || !title.trim()) {
-      return NextResponse.json({ error: 'Tiêu đề bài viết không được để trống' }, { status: 400 });
+      return fail('Tiêu đề bài viết không được để trống', 400);
     }
 
-    const blogId = id || `blog-${Date.now()}`;
+    const blogId = id || generateEntityId('blog');
     const insertPayload = {
       id: blogId,
       title: title.trim(),
@@ -56,7 +92,7 @@ export async function POST(req: NextRequest) {
       is_published: isPublished !== undefined ? Boolean(isPublished) : true,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin!
       .from('blogs')
       .insert([insertPayload])
       .select()
@@ -64,40 +100,22 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Supabase Blog Insert Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return fail(error.message, 500);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: 'Tạo bài viết thành công',
-      data,
-    });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({ data }, { message: 'Tạo bài viết thành công', newSession: auth.newSession });
+  },
+);
 
-// PATCH: Cập nhật bài viết
-export async function PATCH(req: NextRequest) {
-  try {
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
-    if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trên server' },
-        { status: 500 }
-      );
-    }
-
+// PATCH: Update a blog post
+export const PATCH = withAdminRoute(
+  {},
+  async ({ req, auth }) => {
     const body = await req.json();
     const { id, ...updatedFields } = body;
 
     if (!id) {
-      return NextResponse.json({ error: 'Thiếu ID bài viết' }, { status: 400 });
+      return fail('Thiếu ID bài viết', 400);
     }
 
     const dbPayload: Record<string, any> = {};
@@ -111,7 +129,7 @@ export async function PATCH(req: NextRequest) {
     if (updatedFields.author !== undefined) dbPayload.author = updatedFields.author;
     if (updatedFields.isPublished !== undefined) dbPayload.is_published = Boolean(updatedFields.isPublished);
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin!
       .from('blogs')
       .update(dbPayload)
       .eq('id', id)
@@ -120,62 +138,38 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       console.error('Supabase Blog Update Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return fail(error.message, 500);
     }
 
     if (!data) {
-      return NextResponse.json({ error: 'Không tìm thấy bài viết để cập nhật' }, { status: 404 });
+      return fail('Không tìm thấy bài viết để cập nhật', 404);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: 'Cập nhật bài viết thành công',
-      data,
-    });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({ data }, { message: 'Cập nhật bài viết thành công', newSession: auth.newSession });
+  },
+);
 
-// DELETE: Xóa bài viết
-export async function DELETE(req: NextRequest) {
-  try {
-    const authResult = await verifyAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Yêu cầu quyền Quản trị viên' }, { status: 401 });
-    }
-
-    if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY trên server' },
-        { status: 500 }
-      );
-    }
-
+// DELETE: Remove a blog post
+export const DELETE = withAdminRoute(
+  {},
+  async ({ req, auth }) => {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'Thiếu ID bài viết cần xóa' }, { status: 400 });
+      return fail('Thiếu ID bài viết cần xóa', 400);
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabaseAdmin!
       .from('blogs')
       .delete()
       .eq('id', id);
 
     if (error) {
       console.error('Supabase Blog Delete Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return fail(error.message, 500);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: 'Đã xóa bài viết thành công',
-    });
-    return applySessionCookies(response, authResult.newSession);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return ok({}, { message: 'Đã xóa bài viết thành công', newSession: auth.newSession });
+  },
+);

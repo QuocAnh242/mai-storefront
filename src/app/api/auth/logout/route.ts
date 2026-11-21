@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/rateLimit';
+import { enforceRateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
     // 1. IP Rate Limiting: Max 30 requests per minute
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    const rateLimit = checkRateLimit(`logout_${clientIp}`, 30, 60);
+    const rateLimit = await enforceRateLimit(`logout_${clientIp}`, 30, 60);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(

@@ -6,25 +6,25 @@ export type LoadingSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface LoadingProps {
   /**
-   * Kích thước của loading spinner và typography:
-   * - 'xs': Siêu nhỏ gọn cho inline, dropdown, button con, badge
-   * - 'sm': Nhỏ gọn cho UI nhỏ, card phụ, widget con
-   * - 'md': Chuẩn cho card nội dung, khối thông tin
-   * - 'lg': Rộng rãi thoải mái cho component lớn, biểu đồ, bảng dữ liệu
-   * - 'xl': Toàn trang, vùng hiển thị lớn (full page / container rộng)
+   * Spinner and typography size:
+   * - 'xs': ultra-compact for inline, dropdown, nested button, badge
+   * - 'sm': compact for small UI, secondary cards, nested widgets
+   * - 'md': standard for content cards, info blocks
+   * - 'lg': spacious for large components, charts, data tables
+   * - 'xl': full page / wide container areas
    */
   size?: LoadingSize;
-  /** Dòng chữ hiển thị dưới spinner, mặc định là "Đang tải..." */
+  /** Primary text under the spinner; defaults to "Đang tải..." */
   text?: string;
-  /** Dòng chữ phụ nhỏ bên dưới chữ chính (tùy chọn) */
+  /** Optional secondary text under the primary text */
   subtext?: string;
-  /** Class tùy biến cho wrapper container */
+  /** Custom class for the wrapper container */
   className?: string;
-  /** Chiếm trọn chiều cao tối thiểu cho khung rộng rãi (mặc định false) */
+  /** Stretch to full available height (default false) */
   fullHeight?: boolean;
-  /** Rút gọn padding tối đa cho các khung UI chật hẹp */
+  /** Reduce padding for tight UI areas */
   compact?: boolean;
-  /** Màu sắc điểm nhấn cho spinner (mặc định sky-700) */
+  /** Accent color class for the spinner (default sky-700) */
   color?: string;
 }
 
@@ -82,10 +82,10 @@ const SIZE_CONFIGS: Record<
 };
 
 /**
- * Component Loading chuyên dụng:
- * - Spinner xoay mượt mà, phẳng, hiện đại.
- * - Có chữ "Đang tải..." hoặc text tùy chọn hiển thị căn giữa ở DƯỚI spinner.
- * - Phù hợp linh hoạt từ UI nhỏ gọn đến component rộng thoải mái.
+ * Dedicated Loading component:
+ * - Smooth, flat, modern spinner.
+ * - "Đang tải..." or custom text centered BELOW the spinner.
+ * - Flexible from compact UI to spacious components.
  */
 export function Loading({
   size = 'md',
@@ -108,7 +108,7 @@ export function Loading({
         fullHeight ? 'min-h-[40vh] w-full flex-1' : ''
       } ${className}`}
     >
-      {/* SVG Spinner Tinh Xảo: Ring nền mờ + Vòng xoay mượt */}
+      {/* SVG spinner: faint background ring + rotating arc */}
       <div className={`relative ${conf.spinnerSize} shrink-0`}>
         <svg
           className={`animate-spin ${conf.spinnerSize} ${color}`}
@@ -116,7 +116,7 @@ export function Loading({
           fill="none"
           viewBox="0 0 24 24"
         >
-          {/* Vòng tròn nền nhạt */}
+          {/* Faint background circle */}
           <circle
             className="opacity-20"
             cx="12"
@@ -125,7 +125,7 @@ export function Loading({
             stroke="currentColor"
             strokeWidth={conf.strokeWidth}
           />
-          {/* Cung xoay gradient mượt mà */}
+          {/* Rotating gradient arc */}
           <path
             className="opacity-90"
             fill="currentColor"
@@ -134,7 +134,7 @@ export function Loading({
         </svg>
       </div>
 
-      {/* Dòng chữ Đang tải... ở bên dưới */}
+      {/* Loading text below the spinner */}
       {text && (
         <div className="flex flex-col items-center">
           <span
@@ -157,10 +157,10 @@ export function Loading({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SKELETON UI COMPONENTS CHO CÁC TRƯỜNG HỢP GIAO DIỆN CỤ THỂ
+// SKELETON UI COMPONENTS FOR SPECIFIC UI CASES
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Thanh Shimmer nguyên bản */
+/** Base shimmer bar */
 export function Skeleton({
   className = '',
 }: {
@@ -174,7 +174,7 @@ export function Skeleton({
   );
 }
 
-/** Khung Skeleton cho 1 thẻ sản phẩm Storefront */
+/** Skeleton for a single storefront product card */
 export function ProductCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden flex flex-col p-3 sm:p-4 space-y-3 animate-pulse">
@@ -192,7 +192,7 @@ export function ProductCardSkeleton() {
   );
 }
 
-/** Lưới Skeleton cho danh sách sản phẩm */
+/** Skeleton grid for product lists */
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
@@ -203,7 +203,7 @@ export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   );
 }
 
-/** Khung Skeleton cho một bài nhận xét / review khách hàng */
+/** Skeleton for a single customer review item */
 export function ReviewSkeleton() {
   return (
     <div className="p-4 sm:p-5 space-y-3 bg-white rounded-xl border border-slate-100 animate-pulse">
@@ -225,7 +225,7 @@ export function ReviewSkeleton() {
   );
 }
 
-/** Khung Skeleton cho Thẻ Thống Kê / KPI trên Dashboard Admin */
+/** Skeleton for a stat/KPI card on the admin dashboard */
 export function StatCardSkeleton({ title }: { title?: string }) {
   return (
     <div className="bg-white p-4 rounded-lg border border-slate-200 space-y-2 animate-pulse">
@@ -238,7 +238,7 @@ export function StatCardSkeleton({ title }: { title?: string }) {
   );
 }
 
-/** Khung Skeleton cho Biểu Đồ Thống Kê Lưu Lượng */
+/** Skeleton for a traffic statistics chart */
 export function ChartSkeleton() {
   return (
     <div className="w-full h-48 bg-slate-50/60 rounded-lg border border-dashed border-slate-200 flex flex-col items-center justify-center p-6 space-y-3">
@@ -247,7 +247,7 @@ export function ChartSkeleton() {
   );
 }
 
-/** Khung Skeleton cho các hàng bảng dữ liệu Admin (Table Rows) */
+/** Skeleton for admin data table rows */
 export function TableRowsSkeleton({ rows = 4, cols = 5 }: { rows?: number; cols?: number }) {
   return (
     <div className="divide-y divide-slate-100 animate-pulse">
