@@ -1,7 +1,19 @@
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase";
 import { generateEntityId } from "@/lib/ids";
 import { slugify } from "@/lib/slugify";
 import { withAdminRoute, ok, fail } from "@/lib/api/withAdminRoute";
+
+function revalidateProductPaths() {
+  try {
+    revalidatePath("/");
+    revalidatePath("/products");
+    revalidatePath("/products/[...slug]", "page");
+    revalidatePath("/sitemap.xml");
+  } catch (err) {
+    console.warn("[revalidateProductPaths notice]:", err);
+  }
+}
 
 // GET: Fetch products with server pagination and filtering
 export const GET = withAdminRoute(
@@ -206,6 +218,7 @@ export const POST = withAdminRoute(
       return fail("DB_ERROR", 500, humanMessage);
     }
 
+    revalidateProductPaths();
     return ok(
       { data },
       { message: "Tạo sản phẩm thành công", newSession: auth.newSession },
@@ -241,6 +254,7 @@ export const PUT = withAdminRoute(
         await Promise.all(updatePromises);
       }
 
+      revalidateProductPaths();
       return ok(
         {},
         {
@@ -358,6 +372,7 @@ export const PATCH = withAdminRoute(
       return fail("NOT_FOUND", 404, "Không tìm thấy sản phẩm để cập nhật");
     }
 
+    revalidateProductPaths();
     return ok(
       { data },
       { message: "Cập nhật sản phẩm thành công", newSession: auth.newSession },
@@ -392,6 +407,7 @@ export const DELETE = withAdminRoute(
         return fail("DB_ERROR", 500, error.message);
       }
 
+      revalidateProductPaths();
       return ok(
         {},
         {
@@ -416,6 +432,7 @@ export const DELETE = withAdminRoute(
       return fail("DB_ERROR", 500, error.message);
     }
 
+    revalidateProductPaths();
     return ok(
       {},
       { message: "Đã xóa sản phẩm thành công", newSession: auth.newSession },

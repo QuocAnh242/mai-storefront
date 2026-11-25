@@ -139,7 +139,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
 
     Promise.allSettled([
-      supabase.from("products").select("*"),
+      supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false }),
       supabase.from("categories").select("*"),
       supabase
         .from("blogs")

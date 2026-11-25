@@ -157,8 +157,16 @@ export async function getProductBySlug(slugOrId: string | string[]): Promise<Pro
   if (!slugOrId) return null;
 
   const slugs = Array.isArray(slugOrId) ? slugOrId : [slugOrId];
-  const lastParam = slugs[slugs.length - 1];
-  const firstParam = slugs[0];
+  const rawLast = slugs[slugs.length - 1];
+  const rawFirst = slugs[0];
+  let lastParam = rawLast || '';
+  let firstParam = rawFirst || '';
+  try {
+    if (lastParam) lastParam = decodeURIComponent(lastParam);
+    if (firstParam) firstParam = decodeURIComponent(firstParam);
+  } catch {
+    // Keep raw param if malformed percent-encoding
+  }
 
   if (!lastParam && !firstParam) return null;
 
@@ -176,6 +184,7 @@ export async function getProductBySlug(slugOrId: string | string[]): Promise<Pro
       candidates.add(lastParam);
       if (/^\d+$/.test(lastParam)) {
         candidates.add(`p-${lastParam}`);
+        candidates.add(`prod-${lastParam}`);
       }
       if (lastParam.startsWith('p-')) {
         candidates.add(lastParam.replace(/^p-/, ''));
@@ -185,6 +194,7 @@ export async function getProductBySlug(slugOrId: string | string[]): Promise<Pro
       candidates.add(firstParam);
       if (/^\d+$/.test(firstParam)) {
         candidates.add(`p-${firstParam}`);
+        candidates.add(`prod-${firstParam}`);
       }
     }
 
