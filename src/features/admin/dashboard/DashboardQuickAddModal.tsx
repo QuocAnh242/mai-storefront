@@ -26,16 +26,25 @@ export function DashboardQuickAddModal({
   const [unit, setUnit] = useState('Kg');
   const [image, setImage] = useState('');
 
+  React.useEffect(() => {
+    if ((!category || !categories.some(c => c.id === category)) && categories.length > 0) {
+      setCategory(categories[0].id);
+    }
+  }, [categories, category]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!title.trim() || price <= 0) {
       showToast('Vui lòng nhập tên và giá bán hợp lệ', 'error');
       return;
     }
 
     const selectedCatObj = categories.find((c) => c.id === category) || categories[0];
+    const finalCategoryId = selectedCatObj?.id || (categories[0]?.id ?? 'cat-khac');
+    const finalCategoryName = selectedCatObj?.name || (categories[0]?.name ?? 'Vật tư khác');
     const finalImage =
       image.trim() || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80';
 
@@ -47,8 +56,8 @@ export function DashboardQuickAddModal({
         price: Number(price),
         unit: unit.trim() || 'Kg',
         description: '',
-        categoryId: selectedCatObj ? selectedCatObj.id : 'cat-khac',
-        categoryName: selectedCatObj ? selectedCatObj.name : 'Vật tư khác',
+        categoryId: finalCategoryId,
+        categoryName: finalCategoryName,
         images: [finalImage],
         isFeatured: false,
         displayOrder: 0,
@@ -57,10 +66,7 @@ export function DashboardQuickAddModal({
       });
 
       if (res.success) {
-        showToast('Đã tạo nhanh sản phẩm thành công', 'success');
         onClose();
-      } else {
-        showToast('Không thể tạo sản phẩm, vui lòng thử lại', 'error');
       }
     } finally {
       setIsSubmitting(false);

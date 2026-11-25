@@ -319,7 +319,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || !json?.success) {
         const errorMsg =
-          json?.error || json?.message || "Thêm sản phẩm thất bại";
+          json?.message || json?.error || "Thêm sản phẩm thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -375,7 +375,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || !json?.success) {
         const errorMsg =
-          json?.error || json?.message || "Cập nhật sản phẩm thất bại";
+          json?.message || json?.error || "Cập nhật sản phẩm thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -408,7 +408,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || !json?.success) {
         const errorMsg =
-          json?.error || json?.message || "Xóa sản phẩm thất bại";
+          json?.message || json?.error || "Xóa sản phẩm thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -481,7 +481,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || !json?.success) {
         const errorMsg =
-          json?.error || json?.message || "Tạo danh mục thất bại";
+          json?.message || json?.error || "Tạo danh mục thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -519,7 +519,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || !json?.success) {
         const errorMsg =
-          json?.error || json?.message || "Cập nhật danh mục thất bại";
+          json?.message || json?.error || "Cập nhật danh mục thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }
@@ -552,7 +552,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok || !json?.success) {
         const errorMsg =
-          json?.error || json?.message || "Xóa danh mục thất bại";
+          json?.message || json?.error || "Xóa danh mục thất bại";
         showToast(errorMsg, "error");
         return { success: false, error: errorMsg };
       }

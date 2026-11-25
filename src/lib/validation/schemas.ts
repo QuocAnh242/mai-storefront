@@ -61,3 +61,27 @@ export const PayOSWebhookPayloadSchema = z.object({
 });
 
 export type PayOSWebhookPayload = z.infer<typeof PayOSWebhookPayloadSchema>;
+
+/**
+ * Product creation / update schema
+ */
+export const ProductInputSchema = z.object({
+  title: z.string().min(1, 'Vui lòng nhập tên sản phẩm').max(255, 'Tên sản phẩm tối đa 255 ký tự'),
+  slug: z.string().optional(),
+  price: z.number().min(0, 'Giá bán không được âm').default(0),
+  originalPrice: z.number().min(0, 'Giá niêm yết không được âm').optional().nullable(),
+  isContactPrice: z.boolean().default(false),
+  unit: z.string().default('Kg'),
+  description: z.string().default(''),
+  categoryId: z.string().min(1, 'Vui lòng chọn danh mục'),
+  categoryName: z.string().optional(),
+  subcategoryId: z.string().optional().nullable(),
+  subcategoryName: z.string().optional().nullable(),
+  images: z.array(z.string()).default([]),
+  isFeatured: z.boolean().default(false),
+  displayOrder: z.number().default(99),
+  inStock: z.boolean().default(true),
+  specs: z.record(z.string(), z.any()).default({}),
+});
+
+export type ProductInput = z.infer<typeof ProductInputSchema>;

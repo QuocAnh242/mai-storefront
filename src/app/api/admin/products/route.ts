@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { generateEntityId } from "@/lib/ids";
+import { slugify } from "@/lib/slugify";
 import { withAdminRoute, ok, fail } from "@/lib/api/withAdminRoute";
 
 // GET: Fetch products with server pagination and filtering
@@ -87,21 +88,98 @@ export const POST = withAdminRoute(
       specs,
     } = body;
 
-    if (!title || !categoryId) {
-      return fail("MISSING_FIELDS", 400, "Thiếu tên sản phẩm hoặc danh mục");
+    const trimmedTitle = typeof title === "string" ? title.trim() : "";
+    if (!trimmedTitle) {
+      return fail("MISSING_TITLE", 400, "Vui lòng nhập tên sản phẩm");
+    }
+
+    // Ensure category exists in DB, or fallback to first valid category
+    let finalCategoryId = typeof categoryId === "string" ? categoryId.trim() : "";
+    let finalCategoryName = typeof categoryName === "string" ? categoryName.trim() : "Chưa phân loại";
+
+    if (finalCategoryId) {
+      const { data: dbCat } = await supabaseAdmin!
+        .from("categories")
+        .select("id, name")
+        .eq("id", finalCategoryId)
+        .maybeSingle();
+
+      if (dbCat) {
+        finalCategoryName = dbCat.name;
+      } else {
+        // Fallback if client passed non-existent category
+        const { data: fallbackCat } = await supabaseAdmin!
+          .from("categories")
+          .select("id, name")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (fallbackCat) {
+          finalCategoryId = fallbackCat.id;
+          finalCategoryName = fallbackCat.name;
+        } else {
+          return fail("INVALID_CATEGORY", 400, "Danh mục sản phẩm không tồn tại trong hệ thống");
+        }
+      }
+    } else {
+      // If categoryId wasn't passed, fall back to first category
+      const { data: fallbackCat } = await supabaseAdmin!
+        .from("categories")
+        .select("id, name")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (fallbackCat) {
+        finalCategoryId = fallbackCat.id;
+        finalCategoryName = fallbackCat.name;
+      } else {
+        return fail("MISSING_CATEGORY", 400, "Vui lòng chọn danh mục cho sản phẩm");
+      }
     }
 
     const prodId = id || generateEntityId("p");
+
+    // Robust slug deduplication
+    let baseSlug = slug ? slugify(slug) : slugify(trimmedTitle);
+    if (!baseSlug) {
+      baseSlug = prodId;
+    }
+
+    let finalSlug = baseSlug;
+    const { data: existingSlug } = await supabaseAdmin!
+      .from("products")
+      .select("id")
+      .eq("slug", finalSlug)
+      .maybeSingle();
+
+    if (existingSlug && existingSlug.id !== prodId) {
+      const uniqueSuffix = Date.now().toString(36).slice(-4);
+      finalSlug = `${baseSlug}-${uniqueSuffix}`;
+
+      // Secondary check in rare microsecond collisions
+      const { data: collisionCheck } = await supabaseAdmin!
+        .from("products")
+        .select("id")
+        .eq("slug", finalSlug)
+        .maybeSingle();
+
+      if (collisionCheck && collisionCheck.id !== prodId) {
+        finalSlug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
+      }
+    }
+
     const insertPayload = {
       id: prodId,
-      title: title.trim(),
-      slug: slug || prodId,
-      price: isContactPrice ? 0 : Number(price) || 0,
-      original_price: originalPrice ? Number(originalPrice) : null,
+      title: trimmedTitle,
+      slug: finalSlug,
+      price: isContactPrice ? 0 : Math.max(0, Number(price) || 0),
+      original_price: (!isContactPrice && originalPrice) ? Math.max(0, Number(originalPrice)) : null,
       unit: unit || "Kg",
       description: description || "",
-      category_id: categoryId,
-      category_name: categoryName || "Chưa phân loại",
+      category_id: finalCategoryId,
+      category_name: finalCategoryName,
       subcategory_id: subcategoryId || null,
       subcategory_name: subcategoryName || null,
       images: Array.isArray(images) ? images : [],
@@ -119,7 +197,13 @@ export const POST = withAdminRoute(
 
     if (error) {
       console.error("Supabase Product Insert Error:", error);
-      return fail("DB_ERROR", 500, error.message);
+      let humanMessage = error.message;
+      if (error.code === "23505") {
+        humanMessage = "Tên hoặc đường dẫn (slug) sản phẩm đã tồn tại trong cơ sở dữ liệu.";
+      } else if (error.code === "23503") {
+        humanMessage = "Danh mục đã chọn không hợp lệ hoặc đã bị thay đổi.";
+      }
+      return fail("DB_ERROR", 500, humanMessage);
     }
 
     return ok(
@@ -182,33 +266,67 @@ export const PATCH = withAdminRoute(
     }
 
     const dbPayload: Record<string, any> = {};
-    if (updatedFields.title !== undefined)
+    if (updatedFields.title !== undefined) {
       dbPayload.title = updatedFields.title.trim();
-    if (updatedFields.slug !== undefined) dbPayload.slug = updatedFields.slug;
-    if (updatedFields.price !== undefined)
+    }
+    if (updatedFields.slug !== undefined) {
+      let candidateSlug = slugify(updatedFields.slug || updatedFields.title || "");
+      if (candidateSlug) {
+        const { data: existingSlug } = await supabaseAdmin!
+          .from("products")
+          .select("id")
+          .eq("slug", candidateSlug)
+          .neq("id", id)
+          .maybeSingle();
+
+        if (existingSlug) {
+          candidateSlug = `${candidateSlug}-${Date.now().toString(36).slice(-4)}`;
+        }
+        dbPayload.slug = candidateSlug;
+      }
+    }
+    if (updatedFields.price !== undefined) {
       dbPayload.price = Number(updatedFields.price);
+    }
     if (
       updatedFields.isContactPrice !== undefined &&
       updatedFields.isContactPrice
-    )
+    ) {
       dbPayload.price = 0;
-    if (updatedFields.originalPrice !== undefined)
+    }
+    if (updatedFields.originalPrice !== undefined) {
       dbPayload.original_price = updatedFields.originalPrice
         ? Number(updatedFields.originalPrice)
         : null;
+    }
     if (updatedFields.unit !== undefined) dbPayload.unit = updatedFields.unit;
     if (updatedFields.description !== undefined)
       dbPayload.description = updatedFields.description;
-    if (updatedFields.categoryId !== undefined)
-      dbPayload.category_id = updatedFields.categoryId;
-    if (updatedFields.categoryName !== undefined)
+    if (updatedFields.categoryId !== undefined) {
+      const { data: catCheck } = await supabaseAdmin!
+        .from("categories")
+        .select("id, name")
+        .eq("id", updatedFields.categoryId)
+        .maybeSingle();
+
+      if (catCheck) {
+        dbPayload.category_id = catCheck.id;
+        dbPayload.category_name = catCheck.name;
+      } else {
+        dbPayload.category_id = updatedFields.categoryId;
+        if (updatedFields.categoryName !== undefined) {
+          dbPayload.category_name = updatedFields.categoryName;
+        }
+      }
+    } else if (updatedFields.categoryName !== undefined) {
       dbPayload.category_name = updatedFields.categoryName;
+    }
     if (updatedFields.subcategoryId !== undefined)
       dbPayload.subcategory_id = updatedFields.subcategoryId || null;
     if (updatedFields.subcategoryName !== undefined)
       dbPayload.subcategory_name = updatedFields.subcategoryName || null;
     if (updatedFields.images !== undefined)
-      dbPayload.images = updatedFields.images;
+      dbPayload.images = Array.isArray(updatedFields.images) ? updatedFields.images : [];
     if (updatedFields.isFeatured !== undefined)
       dbPayload.is_featured = Boolean(updatedFields.isFeatured);
     if (updatedFields.displayOrder !== undefined)
@@ -227,7 +345,13 @@ export const PATCH = withAdminRoute(
 
     if (error) {
       console.error("Supabase Product Update Error:", error);
-      return fail("DB_ERROR", 500, error.message);
+      let humanMessage = error.message;
+      if (error.code === "23505") {
+        humanMessage = "Tên hoặc đường dẫn (slug) sản phẩm đã trùng lặp trong hệ thống.";
+      } else if (error.code === "23503") {
+        humanMessage = "Danh mục đã chọn không hợp lệ.";
+      }
+      return fail("DB_ERROR", 500, humanMessage);
     }
 
     if (!data) {

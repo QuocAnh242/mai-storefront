@@ -4,6 +4,7 @@ import {
   CreateReviewSchema,
   CreateOrderSchema,
   PayOSWebhookPayloadSchema,
+  ProductInputSchema,
 } from '@/lib/validation/schemas';
 
 describe('Validation Schemas', () => {
@@ -109,6 +110,39 @@ describe('Validation Schemas', () => {
         signature: '',
       };
       const res = PayOSWebhookPayloadSchema.safeParse(payload);
+      expect(res.success).toBe(false);
+    });
+  });
+
+  describe('ProductInputSchema', () => {
+    it('accepts valid product payload', () => {
+      const res = ProductInputSchema.safeParse({
+        title: 'Bột Kim Tuyến Vàng 0.2mm',
+        price: 150000,
+        categoryId: 'cat-kim-tuyen',
+      });
+      expect(res.success).toBe(true);
+      if (res.success) {
+        expect(res.data.unit).toBe('Kg');
+        expect(res.data.inStock).toBe(true);
+      }
+    });
+
+    it('rejects empty product title', () => {
+      const res = ProductInputSchema.safeParse({
+        title: '',
+        price: 150000,
+        categoryId: 'cat-kim-tuyen',
+      });
+      expect(res.success).toBe(false);
+    });
+
+    it('rejects missing categoryId', () => {
+      const res = ProductInputSchema.safeParse({
+        title: 'Bột Kim Tuyến',
+        price: 150000,
+        categoryId: '',
+      });
       expect(res.success).toBe(false);
     });
   });
