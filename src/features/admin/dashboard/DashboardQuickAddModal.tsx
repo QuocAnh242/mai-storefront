@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Category, Product } from '@/shared/types';
-import { slugify } from '@/lib/slugify';
-import { useToast } from '@/shared/context/ToastContext';
+import React, { useState } from "react";
+import { Category, Product } from "@/shared/types";
+import { slugify } from "@/lib/slugify";
+import { useToast } from "@/shared/context/ToastContext";
 
 interface DashboardQuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
-  onAddProduct: (product: Omit<Product, 'id'>) => Promise<{ success: boolean }>;
+  onAddProduct: (product: Omit<Product, "id">) => Promise<{ success: boolean }>;
 }
 
 export function DashboardQuickAddModal({
@@ -20,14 +20,17 @@ export function DashboardQuickAddModal({
 }: DashboardQuickAddModalProps) {
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState("");
   const [price, setPrice] = useState<number>(0);
-  const [category, setCategory] = useState(categories[0]?.id || '');
-  const [unit, setUnit] = useState('Kg');
-  const [image, setImage] = useState('');
+  const [category, setCategory] = useState(categories[0]?.id || "");
+  const [unit, setUnit] = useState("Kg");
+  const [image, setImage] = useState("");
 
   React.useEffect(() => {
-    if ((!category || !categories.some(c => c.id === category)) && categories.length > 0) {
+    if (
+      (!category || !categories.some((c) => c.id === category)) &&
+      categories.length > 0
+    ) {
       setCategory(categories[0].id);
     }
   }, [categories, category]);
@@ -38,15 +41,19 @@ export function DashboardQuickAddModal({
     e.preventDefault();
     if (isSubmitting) return;
     if (!title.trim() || price <= 0) {
-      showToast('Vui lòng nhập tên và giá bán hợp lệ', 'error');
+      showToast("Vui lòng nhập tên và giá bán hợp lệ", "error");
       return;
     }
 
-    const selectedCatObj = categories.find((c) => c.id === category) || categories[0];
-    const finalCategoryId = selectedCatObj?.id || (categories[0]?.id ?? 'cat-khac');
-    const finalCategoryName = selectedCatObj?.name || (categories[0]?.name ?? 'Vật tư khác');
+    const selectedCatObj =
+      categories.find((c) => c.id === category) || categories[0];
+    const finalCategoryId =
+      selectedCatObj?.id || (categories[0]?.id ?? "cat-khac");
+    const finalCategoryName =
+      selectedCatObj?.name || (categories[0]?.name ?? "Vật tư khác");
     const finalImage =
-      image.trim() || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80';
+      image.trim() ||
+      "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80";
 
     setIsSubmitting(true);
     try {
@@ -54,8 +61,8 @@ export function DashboardQuickAddModal({
         title: title.trim(),
         slug: slugify(title.trim()),
         price: Number(price),
-        unit: unit.trim() || 'Kg',
-        description: '',
+        unit: unit.trim() || "Kg",
+        description: "",
         categoryId: finalCategoryId,
         categoryName: finalCategoryName,
         images: [finalImage],
@@ -83,7 +90,9 @@ export function DashboardQuickAddModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <h3 className="font-bold text-slate-900 text-sm">Tạo nhanh sản phẩm</h3>
+          <h3 className="font-bold text-slate-900 text-sm">
+            Tạo nhanh sản phẩm
+          </h3>
           <button
             type="button"
             onClick={onClose}
@@ -118,7 +127,7 @@ export function DashboardQuickAddModal({
                 type="number"
                 required
                 placeholder="150000"
-                value={price || ''}
+                value={price || ""}
                 onChange={(e) => setPrice(Number(e.target.value))}
                 className="w-full border border-slate-300 text-slate-900 text-xs rounded p-2 outline-none focus:border-slate-800 font-bold"
               />
@@ -183,7 +192,7 @@ export function DashboardQuickAddModal({
               disabled={isSubmitting}
               className="px-4 py-1.5 rounded bg-sky-700 hover:bg-sky-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer"
             >
-              {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
+              {isSubmitting ? "Đang lưu..." : "Lưu sản phẩm"}
             </button>
           </div>
         </form>
