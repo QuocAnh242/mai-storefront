@@ -135,7 +135,7 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
               {/* Product Description */}
               <div className="space-y-1.5">
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Mô Tả Sản Phẩm</h4>
-                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line max-h-40 overflow-y-auto pr-1">
+                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words max-h-40 overflow-y-auto pr-1">
                   {product.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}
                 </p>
               </div>

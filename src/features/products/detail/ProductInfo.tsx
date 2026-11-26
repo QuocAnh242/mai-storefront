@@ -88,9 +88,9 @@ export function ProductInfo({ product, onScrollToReviews }: ProductInfoProps) {
 
         {/* Quick Description */}
         {product.description && (
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pt-0.5">
+          <div className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-wrap break-words pt-0.5">
             {product.description}
-          </p>
+          </div>
         )}
       </div>
 
