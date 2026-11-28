@@ -65,9 +65,12 @@ export function withAdminRoute(
 
       // 4. Business logic
       return await handler({ req, auth });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Admin Route Error]', err);
-      return NextResponse.json({ error: err.message || 'Lỗi máy chủ' }, { status: 500 });
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'Lỗi máy chủ' },
+        { status: 500 },
+      );
     }
   };
 }

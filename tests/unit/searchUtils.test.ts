@@ -1,47 +1,49 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from 'vitest';
 import {
   removeVietnameseTones,
   normalizeSearchQuery,
   matchesSearch,
   filterProductsBySearch,
-} from "@/lib/searchUtils";
+  getMatchHighlightParts,
+} from '@/lib/searchUtils';
 
-describe("searchUtils (Vietnamese Diacritic Normalization & Search)", () => {
-  it("removes Vietnamese tones accurately", () => {
-    expect(removeVietnameseTones("Bột Kim Tuyến")).toBe("Bot Kim Tuyen");
-    expect(removeVietnameseTones("Băng Keo Đục Đóng Thùng")).toBe("Bang Keo Duc Dong Thung");
-    expect(removeVietnameseTones("Sơn Xịt Đỏ ATM")).toBe("Son Xit Do ATM");
+describe('searchUtils (Vietnamese Diacritic Normalization, Ranking & Highlight)', () => {
+  it('removes Vietnamese tones accurately', () => {
+    expect(removeVietnameseTones('Bột Kim Tuyến')).toBe('Bot Kim Tuyen');
+    expect(removeVietnameseTones('Băng Keo Đục Đóng Thùng')).toBe('Bang Keo Duc Dong Thung');
+    expect(removeVietnameseTones('Sơn Xịt Đỏ ATM')).toBe('Son Xit Do ATM');
   });
 
-  it("normalizes queries with trimming and lowercasing", () => {
-    expect(normalizeSearchQuery("  BỘT   MÀU   ")).toBe("bot mau");
-    expect(normalizeSearchQuery("KIM TUYẾN 1/128")).toBe("kim tuyen 1/128");
+  it('normalizes queries with trimming and lowercasing', () => {
+    expect(normalizeSearchQuery('  BỘT   MÀU   ')).toBe('bot mau');
+    expect(normalizeSearchQuery('KIM TUYẾN 1/128')).toBe('kim tuyen 1/128');
   });
 
-  it("matches search with accent-insensitive search queries", () => {
-    expect(matchesSearch("Bột Màu Ba Biển Vật Liệu Xây Dựng", "bot mau")).toBe(true);
-    expect(matchesSearch("Bột Màu Ba Biển Vật Liệu Xây Dựng", "ba bien")).toBe(true);
-    expect(matchesSearch("Bột Kim Tuyến Ngũ Sắc Ánh Cầu Vồng", "kim tuyen cau vong")).toBe(true);
-    expect(matchesSearch("Băng Keo Trong", "kim tuyen")).toBe(false);
+  it('matches search with accent-insensitive search queries', () => {
+    expect(matchesSearch('Bột Màu Ba Biển Vật Liệu Xây Dựng', 'bot mau')).toBe(true);
+    expect(matchesSearch('Bột Màu Ba Biển Vật Liệu Xây Dựng', 'ba bien')).toBe(true);
+    expect(matchesSearch('Bột Kim Tuyến Ngũ Sắc Ánh Cầu Vồng', 'kim tuyen cau vong')).toBe(true);
+    expect(matchesSearch('Băng Keo Trong', 'kim tuyen')).toBe(false);
   });
 
-  it("filters products correctly by title, category, or description", () => {
+  it('filters and ranks products with exact/prefix title matches first', () => {
     const products = [
-      { id: "1", title: "Bột Kim Tuyến Vàng 1/128", categoryName: "Bột Kim Tuyến", description: "Hạt nhũ mịn óng ánh" },
-      { id: "2", title: "Bột Màu Đỏ Ba Biển", categoryName: "Bột Màu & Camay", description: "Chuyên pha xi măng gạch" },
-      { id: "3", title: "Băng Keo Trong 200ya", categoryName: "Băng Keo", description: "Đóng gói dán thùng carton" },
+      { id: '1', title: 'Keo Dán Phối Kim Tuyến', categoryName: 'Keo Dán', description: 'Keo pha' },
+      { id: '2', title: 'Bột Kim Tuyến Vàng 1/128', categoryName: 'Bột Kim Tuyến', description: 'Hạt nhũ mịn' },
+      { id: '3', title: 'Kim Tuyến Ngũ Sắc', categoryName: 'Bột Kim Tuyến', description: 'Ánh cầu vồng' },
+      { id: '4', title: 'Băng Keo Trong 200ya', categoryName: 'Băng Keo', description: 'Đóng thùng carton' },
     ];
 
-    const res1 = filterProductsBySearch(products, "kim tuyen");
-    expect(res1.length).toBe(1);
-    expect(res1[0].id).toBe("1");
+    const ranked = filterProductsBySearch(products, 'kim tuyen');
+    expect(ranked.map((p) => p.id)).toEqual(['3', '2', '1']);
 
-    const res2 = filterProductsBySearch(products, "xi mang");
-    expect(res2.length).toBe(1);
-    expect(res2[0].id).toBe("2");
+    const byDesc = filterProductsBySearch(products, 'dong thung');
+    expect(byDesc.map((p) => p.id)).toEqual(['4']);
+  });
 
-    const res3 = filterProductsBySearch(products, "bang keo");
-    expect(res3.length).toBe(1);
-    expect(res3[0].id).toBe("3");
+  it('highlights Vietnamese diacritic characters accurately from accentless queries', () => {
+    const parts = getMatchHighlightParts('Bột Kim Tuyến Vàng', 'kim tuyen');
+    const highlighted = parts.filter((p) => p.matched).map((p) => p.text).join('');
+    expect(highlighted).toBe('Kim Tuyến');
   });
 });

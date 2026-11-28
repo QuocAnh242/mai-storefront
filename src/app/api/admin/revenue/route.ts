@@ -26,7 +26,7 @@ export const GET = withAdminRoute(
 
     return ok(
       {
-        data: (data || []).map((item: any) => ({
+        data: (data || []).map((item: { id: string; amount: number | string; date: string; source: string; note?: string | null; created_at: string }) => ({
           id: item.id,
           amount: Number(item.amount),
           date: item.date,

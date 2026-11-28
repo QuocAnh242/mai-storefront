@@ -1,59 +1,56 @@
 ---
 name: natural-ui-craft
 description: >-
-  Definitive runbook and design token reference for crafting flat, modern, natural UI
-  without artificial AI aesthetics. Use whenever creating or modifying UI components,
-  pages, modals, cards, or styling in this repository.
+  Definitive runbook and design token reference for crafting Navy Glassmorphism &
+  crisp e-commerce UI in this repository. Use whenever creating or modifying UI
+  components, pages, modals, cards, or styling.
 ---
 
-# Natural UI Craft — Anti-AI-Slop Design System
+# Crafted Navy Glassmorphism — Design System & UI Kit Guide
 
-This skill enforces human-crafted, tactile, and natural e-commerce aesthetics, strictly preventing generic "AI slop" in this codebase.
+This skill enforces a refined, high-contrast **Navy + Crafted Glassmorphism** aesthetic tailored for the MAI KIM TUYẾN storefront and admin panel.
 
-## Core Rules
+## 1. Glassmorphism & Surface Tokens (`src/app/globals.css`)
 
-### 1. Absolute Bans
-- No glowing gradients (e.g. `bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500`).
-- No heavy glassmorphism blur stacks (`backdrop-blur-xl bg-white/20`).
-- No tacky AI emojis or badges (`✨`, `🚀`, `🤖`, `AI-Powered`).
-- No AI-generated arbitrary SVGs with weird bezier curves.
+Glassmorphism IS welcomed and encouraged on **elevated, sticky, and overlay surfaces**, while dense reading cards and data tables stay crisp white.
 
----
+### Standardized Glass Classes
+- **`.glass-nav`** (Dark Navy translucent header/sticky bar): `bg-sky-950/90 backdrop-blur-md border-b border-white/15`
+- **`.glass-nav-light`** (Light sticky bar / mobile bottom bar): `bg-white/85 backdrop-blur-md border-t border-slate-200/80`
+- **`.glass-surface`** (Light translucent badge / floating dock / hero pill): `bg-white/80 backdrop-blur-md border border-white/60 shadow-sm`
+- **`.glass-surface-dark`** (Glass button/card over dark photography): `bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 text-white`
+- **`.glass-modal-backdrop`** & **`.glass-modal-panel`**:
+  - Backdrop: `bg-slate-950/60 backdrop-blur-xs`
+  - Panel: `bg-white/95 backdrop-blur-xl border border-white/60 shadow-2xl rounded-2xl`
 
-### 2. Standardized Iconography: Lucide React Only
-Every icon in the UI must be imported from `lucide-react`.
-
-Standard Sizing Scale:
-- `w-4 h-4` (16px): Inline status indicators, badges, table actions.
-- `w-5 h-5` (20px): Form inputs, standard buttons, navigation items.
-- `w-6 h-6` (24px): Page headers, feature highlights, modal titles.
-
-Stroke Width:
-- Maintain uniform `strokeWidth={1.5}` or `strokeWidth={2}` across the component. Never mix random stroke widths.
-
----
-
-### 3. Design Tokens & Styling Primitives
-
-Use standard Tailwind v4 classes and design tokens defined in `src/app/globals.css`:
-
-#### Surfaces & Borders
-- Canvas Background: `bg-slate-50` (`#f8fafc`) or pure `bg-white` (`#ffffff`).
-- Flat Card Surface: `bg-white border border-slate-200 rounded-lg`.
-- Hover Interaction: `hover:border-slate-300 hover:bg-slate-50/50`.
-- Shadows: Use micro-shadows `shadow-xs` or `shadow-sm`. Never use fuzzy glowing drop-shadows.
-
-#### Typography & Text Hierarchy
-- Headings: `text-slate-900 font-semibold tracking-tight`.
-- Body Copy: `text-slate-600 text-sm leading-relaxed`.
-- Subdued / Meta: `text-slate-400 text-xs`.
-- Primary Accent: Amber `amber-600` (`#d97706`) for craft & glitter branding.
-- Success Accent: Emerald `emerald-600` (`#059669`) for stock & payment status.
-- Destructive Accent: Rose `rose-600` (`#e11d48`) for delete & alerts.
+### Practical Glass Rules (Prevent UX & GPU Issues)
+1. Never stack two `backdrop-blur-*` layers directly inside one another.
+2. Never put translucent glass on multi-column admin tables or long-form blog text.
+3. Always verify text contrast: `text-white` / `text-sky-100` on dark glass; `text-slate-900` / `text-slate-700` on light glass.
+4. No neon rainbow gradients (`from-purple-500 via-pink-500 to-indigo-500`), no cheesy AI emojis (`✨`, `🚀`, `🤖`).
 
 ---
 
-### 4. Component Structure Best Practices
-- Keep components small and focused in `src/features/[domain]/`.
-- Prefer flat layout with crisp 1px borders over nested card cards.
-- Ensure all interactive elements have accessible focus rings (`focus-visible:ring-2 focus-visible:ring-slate-900/10`).
+## 2. Color & Radius Tokens
+
+- **Brand Primary**: Navy `sky-950` (`#082f49`) & `sky-700` (`#0369a1`)
+- **Craft Accent**: Warm Amber `amber-600` (`#d97706`) for glitter highlights & featured tags
+- **Semantic Accents**: Emerald `emerald-600` (in-stock, paid), Rose `rose-600` (discount, destructive)
+- **Content Surfaces**: Canvas `bg-slate-50` (`#f8fafc`) / `bg-white`; cards `bg-white border border-slate-200 rounded-xl`
+- **Unified Radius Scale**:
+  - Inputs, buttons, small controls: `rounded-lg`
+  - Product cards, dropdowns, filter panels: `rounded-xl`
+  - Modals, hero containers, banners: `rounded-2xl`
+  - Badges & filter pills: `rounded-full`
+
+---
+
+## 3. Mandatory UI Kit Primitives & Utilities
+
+Never hand-roll repeated modal portals, confirm dialogs, buttons, or price formatters:
+- **Components (`@/components/ui/`)**: `Button`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `FormField` (`Input`, `Select`, `Textarea`), `Pagination`, `EmptyState`, `Loading`.
+- **Class Merging**: Always use `cn()` from `@/lib/cn`.
+- **Formatting**: Always use `formatVND()`, `isContactProduct()`, and `formatDateVN()` from `@/lib/format`.
+- **Notifications**: Use `toast` from `sonner` (never `window.alert` or `window.confirm`).
+- **Animations**: Powered by `tw-animate-css` (`animate-in fade-in zoom-in-95`).
+- **Icons**: Strictly `lucide-react` (`w-4 h-4`, `w-5 h-5`, `w-6 h-6`) with uniform `strokeWidth={1.75}` or `2`.

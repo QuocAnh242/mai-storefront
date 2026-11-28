@@ -49,16 +49,15 @@ export function MegaCategoryMenu({
         <span className="hidden sm:inline">DANH MỤC SẢN PHẨM</span>
         <span className="sm:hidden">DANH MỤC</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-white/70 transition-transform duration-200 ${
+          className={`w-3.5 h-3.5 text-white/75 transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
-      {/* Mega Menu Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 top-full w-60 sm:w-64 bg-white text-slate-800 rounded-b-xl border border-slate-200 shadow-2xl py-2 z-50 animate-in fade-in duration-150 max-h-[70vh] overflow-y-auto">
-          <div className="px-4 py-1.5 text-[10px] font-bold text-sky-800 uppercase tracking-widest border-b border-slate-100 mb-1 sticky top-0 bg-white">
+        <div className="absolute left-0 top-full w-60 sm:w-64 glass-modal-panel rounded-b-xl py-2 z-50 animate-in fade-in duration-150 max-h-[70vh] overflow-y-auto">
+          <div className="px-4 py-1.5 text-[10px] font-bold text-sky-800 uppercase tracking-widest border-b border-slate-100 mb-1 sticky top-0 bg-white/95">
             <span>TẤT CẢ VẬT TƯ ({categories.length})</span>
           </div>
 

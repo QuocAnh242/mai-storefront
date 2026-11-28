@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       .digest("hex")
       .slice(0, 16);
 
-    let body: any = {};
+    let body: Record<string, unknown> = {};
     try {
       body = await req.json();
     } catch {

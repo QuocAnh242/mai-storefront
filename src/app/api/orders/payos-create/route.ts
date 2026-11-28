@@ -63,8 +63,11 @@ export async function POST(req: Request) {
 
     const data = await payosRes.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('PayOS Create Link Error:', error);
-    return NextResponse.json({ error: 'Failed to create PayOS link', message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create PayOS link', message: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 },
+    );
   }
 }

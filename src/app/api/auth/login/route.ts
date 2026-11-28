@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     if (error || !data.session) {
       const errorStatus = error?.status || 401;
       const rawMsg = (error?.message || "").toLowerCase();
-      const errorCode = (error as any)?.code || "";
+      const errorCode = (error as { code?: string } | null)?.code || "";
 
       console.error("[Supabase Auth Failed]:", {
         email,
@@ -160,10 +160,10 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Server Auth Error:", error);
     return NextResponse.json(
-      { error: "SERVER_ERROR", message: error.message },
+      { error: "SERVER_ERROR", message: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },
     );
   }

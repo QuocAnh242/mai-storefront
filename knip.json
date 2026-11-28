@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "scripts/**",
+    "src/features/cart/**",
+    "src/features/checkout/**",
+    "src/features/products/ProductDetailModal.tsx",
+    "src/shared/context/CartContext.tsx",
+    "src/components/ui/index.ts",
+    "tests/mocks/server-only.ts"
+  ],
+  "rules": {
+    "exports": "warn",
+    "types": "off"
+  }
+}

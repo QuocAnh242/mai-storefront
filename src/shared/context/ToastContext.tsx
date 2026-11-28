@@ -1,16 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 
 export type ToastType = 'success' | 'error' | 'info';
-
-export interface ToastItem {
-  id: string;
-  message: string;
-  type: ToastType;
-}
 
 interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;
@@ -19,80 +13,30 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-function ToastItemComponent({ toast, onRemove }: { toast: ToastItem; onRemove: (id: string) => void }) {
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsAnimating(true), 10);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleDismiss = useCallback(() => {
-    setIsAnimating(false);
-    setTimeout(() => {
-      onRemove(toast.id);
-    }, 300); // 300ms slide exit duration
-  }, [onRemove, toast.id]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleDismiss();
-    }, 3200);
-    return () => clearTimeout(timer);
-  }, [handleDismiss]);
-
-  let bgClass = 'bg-sky-950 border-sky-800 text-white';
-  let icon = <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />;
-
-  if (toast.type === 'error') {
-    bgClass = 'bg-rose-950 border-rose-800 text-white';
-    icon = <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />;
-  } else if (toast.type === 'info') {
-    bgClass = 'bg-sky-950 border-sky-800 text-white';
-    icon = <Info className="w-5 h-5 text-sky-400 shrink-0" />;
+function dispatchToast(message: string, type: ToastType) {
+  if (type === 'error') {
+    toast.error(message);
+  } else if (type === 'info') {
+    toast.info(message);
+  } else {
+    toast.success(message);
   }
-
-  return (
-    <div
-      className={`pointer-events-auto p-4 rounded-2xl border ${bgClass} shadow-2xl flex items-center justify-between gap-3 transition-transform duration-300 ease-out transform ${
-        isAnimating ? 'translate-x-0' : 'translate-x-full'
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        {icon}
-        <span className="text-xs font-bold leading-snug">{toast.message}</span>
-      </div>
-      <button
-        onClick={handleDismiss}
-        className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer shrink-0"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
-  );
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const pathname = usePathname();
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
+    dispatchToast(message, type);
   }, []);
 
   const setPendingToast = useCallback((message: string, type: ToastType = 'success') => {
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem('pending_toast', JSON.stringify({ message, type }));
-      } catch {
-        // ignore
-      }
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem('pending_toast', JSON.stringify({ message, type }));
+    } catch {
+      // ignore storage failure
     }
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   useEffect(() => {
@@ -103,24 +47,27 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem('pending_toast');
         const parsed = JSON.parse(pending);
         if (parsed?.message) {
-          showToast(parsed.message, parsed.type || 'success');
+          dispatchToast(parsed.message, parsed.type || 'success');
         }
       }
     } catch {
-      // ignore
+      // ignore storage failure
     }
-  }, [pathname, showToast]);
+  }, [pathname]);
 
   return (
     <ToastContext.Provider value={{ showToast, setPendingToast }}>
       {children}
-
-      {/* Floating Toast Container (Top Right with Overflow Hidden for Smooth Right Slide) */}
-      <div className="fixed top-5 right-5 z-[200] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none overflow-hidden p-1">
-        {toasts.map((toast) => (
-          <ToastItemComponent key={toast.id} toast={toast} onRemove={removeToast} />
-        ))}
-      </div>
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          classNames: {
+            toast: 'rounded-xl border shadow-lg font-sans text-xs font-semibold',
+          },
+        }}
+      />
     </ToastContext.Provider>
   );
 }
@@ -132,4 +79,3 @@ export function useToast() {
   }
   return context;
 }
-

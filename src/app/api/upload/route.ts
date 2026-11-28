@@ -107,10 +107,10 @@ export async function POST(req: NextRequest) {
       publicId: result.public_id,
     });
     return applySessionCookies(response, authResult.newSession);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Cloudinary Upload Error]", error);
     return NextResponse.json(
-      { error: error.message || "Upload thất bại" },
+      { error: error instanceof Error ? error.message : "Upload thất bại" },
       { status: 500 },
     );
   }

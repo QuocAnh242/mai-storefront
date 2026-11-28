@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState } from 'react';
 import { Product } from '@/shared/types';
-import { useStore } from '@/shared/context/StoreContext';
-import { useToast } from '@/shared/context/ToastContext';
 import { slugify } from '@/lib/slugify';
-import { X } from 'lucide-react';
+import { toast } from 'sonner';
+import { Modal, Field, Input, Textarea } from '@/components/ui';
+import { useAdminCategories } from '../hooks/useAdminCategories';
+import { useAdminProducts } from '../hooks/useAdminProducts';
 import { ProductPricingFields } from './components/ProductPricingFields';
 import { ProductImagesField } from './components/ProductImagesField';
 import { ProductCategoryFields } from './components/ProductCategoryFields';
@@ -19,59 +19,36 @@ interface ProductFormModalProps {
 }
 
 export function ProductFormModal({ editingProduct, onClose }: ProductFormModalProps) {
-  const { categories, addProduct, updateProduct } = useStore();
-  const { showToast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const { categories } = useAdminCategories();
+  const { createProduct, updateProduct } = useAdminProducts();
 
-  const [title, setTitle] = useState('');
-  const [price, setPrice] = useState<number>(0);
-  const [originalPrice, setOriginalPrice] = useState<number | undefined>(undefined);
-  const [isContactPrice, setIsContactPrice] = useState(false);
-  const [unit, setUnit] = useState('Kg');
-  const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
-  const [subcategoryId, setSubcategoryId] = useState('');
-  const [images, setImages] = useState<string[]>([]);
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [inStock, setInStock] = useState(true);
+  const initialContactPrice = editingProduct
+    ? Boolean(editingProduct.isContactPrice || editingProduct.price <= 1)
+    : false;
+  const [title, setTitle] = useState(editingProduct?.title || '');
+  const [price, setPrice] = useState<number>(
+    editingProduct && !initialContactPrice ? editingProduct.price : 0,
+  );
+  const [originalPrice, setOriginalPrice] = useState<number | undefined>(
+    editingProduct?.originalPrice,
+  );
+  const [isContactPrice, setIsContactPrice] = useState(initialContactPrice);
+  const [unit, setUnit] = useState(editingProduct?.unit || 'Kg');
+  const [description, setDescription] = useState(editingProduct?.description || '');
+  const [categoryId, setCategoryId] = useState(
+    editingProduct?.categoryId || categories[0]?.id || '',
+  );
+  const [subcategoryId, setSubcategoryId] = useState(editingProduct?.subcategoryId || '');
+  const [images, setImages] = useState<string[]>(editingProduct?.images || []);
+  const [isFeatured, setIsFeatured] = useState(editingProduct?.isFeatured || false);
+  const [inStock, setInStock] = useState(editingProduct ? editingProduct.inStock : true);
 
-  useEffect(() => setMounted(true), []);
+  const isSaving = createProduct.isPending || updateProduct.isPending;
 
-  useEffect(() => {
-    if (!editingProduct && (!categoryId || !categories.some((c) => c.id === categoryId)) && categories.length > 0) {
-      setCategoryId(categories[0].id);
-    }
-  }, [categories, categoryId, editingProduct]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isSaving) onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, isSaving]);
-
-  useEffect(() => {
-    if (editingProduct) {
-      setTitle(editingProduct.title);
-      const contactPrice = Boolean(editingProduct.isContactPrice || editingProduct.price <= 1);
-      setIsContactPrice(contactPrice);
-      setPrice(contactPrice ? 0 : editingProduct.price);
-      setOriginalPrice(editingProduct.originalPrice);
-      setUnit(editingProduct.unit);
-      setDescription(editingProduct.description);
-      setCategoryId(editingProduct.categoryId);
-      setSubcategoryId(editingProduct.subcategoryId || '');
-      setImages(editingProduct.images || []);
-      setIsFeatured(editingProduct.isFeatured);
-      setInStock(editingProduct.inStock);
-    }
-  }, [editingProduct]);
-
-  if (!mounted) return null;
-
-  const selectedCategoryObj = categories.find((c) => c.id === categoryId) || categories[0];
+  const effectiveCategoryId =
+    categories.some((c) => c.id === categoryId) ? categoryId : categories[0]?.id || '';
+  const selectedCategoryObj =
+    categories.find((c) => c.id === effectiveCategoryId) || categories[0];
   const subcategories = selectedCategoryObj?.subcategories || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,32 +56,33 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
     if (isSaving) return;
 
     const trimmedTitle = title.trim();
-    const finalCategoryId = categoryId || categories[0]?.id;
-
+    const finalCategoryId = effectiveCategoryId || categories[0]?.id;
     if (!trimmedTitle || !finalCategoryId) {
-      showToast('Vui lòng nhập Tên sản phẩm và Chọn danh mục!', 'error');
+      toast.error('Vui lòng nhập Tên sản phẩm và Chọn danh mục!');
       return;
     }
 
     if (!isContactPrice && (price === undefined || price <= 0)) {
-      showToast('Vui lòng nhập Giá bán hợp lệ hoặc tích chọn "Giá Liên Hệ"!', 'error');
+      toast.error('Vui lòng nhập Giá bán hợp lệ hoặc tích chọn "Giá Liên Hệ"!');
       return;
     }
 
-    const categoryName = selectedCategoryObj?.name || (categories[0]?.name ?? 'Chưa phân loại');
     const subcategoryObj = subcategories.find((s) => s.id === subcategoryId);
-    const finalImages = images.length > 0 ? images : ['https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80'];
+    const finalImages =
+      images.length > 0
+        ? images
+        : ['https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80'];
 
-    const productPayload = {
+    const payload = {
       title: trimmedTitle,
       slug: slugify(trimmedTitle),
       price: isContactPrice ? 0 : Number(price),
-      originalPrice: isContactPrice ? undefined : (originalPrice ? Number(originalPrice) : undefined),
+      originalPrice: isContactPrice ? undefined : originalPrice ? Number(originalPrice) : undefined,
       isContactPrice,
       unit: unit.trim() || 'Kg',
       description,
       categoryId: finalCategoryId,
-      categoryName,
+      categoryName: selectedCategoryObj?.name || 'Chưa phân loại',
       subcategoryId: subcategoryId || undefined,
       subcategoryName: subcategoryObj?.name || undefined,
       images: finalImages,
@@ -113,115 +91,86 @@ export function ProductFormModal({ editingProduct, onClose }: ProductFormModalPr
       inStock,
     };
 
-    setIsSaving(true);
     try {
-      const res = editingProduct
-        ? await updateProduct(editingProduct.id, productPayload)
-        : await addProduct(productPayload);
-
-      if (res.success) onClose();
-    } finally {
-      setIsSaving(false);
+      if (editingProduct) {
+        await updateProduct.mutateAsync({ id: editingProduct.id, ...payload });
+      } else {
+        await createProduct.mutateAsync(payload);
+      }
+      onClose();
+    } catch {
+      // handled by mutation onError
     }
   };
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[110] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
-      onClick={() => { if (!isSaving) onClose(); }}
+  return (
+    <Modal
+      open
+      onOpenChange={(open) => !open && !isSaving && onClose()}
+      title={editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Tạo Sản Phẩm Mới'}
+      size="xl"
+      closeDisabled={isSaving}
     >
-      <div
-        className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl animate-in zoom-in-95 my-6 border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="bg-sky-950 text-white p-4 flex items-center justify-between">
-          <h3 className="font-bold text-base">
-            {editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Tạo Sản Phẩm Mới'}
-          </h3>
-          <button
-            type="button"
+      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <Field label="Tên sản phẩm" required>
+          <Input
+            required
             disabled={isSaving}
-            onClick={onClose}
-            className="text-sky-300 hover:text-white p-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            autoFocus
+            placeholder="Ví dụ: Bột Màu Ba Biển Vật Liệu Xây Dựng (Bao 5kg)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="font-semibold"
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[82vh] overflow-y-auto">
-          <div>
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
-              Tên sản phẩm (*)
-            </label>
-            <input
-              type="text"
-              required
-              disabled={isSaving}
-              autoFocus
-              placeholder="Ví dụ: Bột Màu Ba Biển Vật Liệu Xây Dựng (Bao 5kg)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-semibold rounded-xl p-3 outline-none focus:border-sky-600 focus:bg-white transition-colors"
-            />
-          </div>
+        <ProductPricingFields
+          price={price}
+          setPrice={setPrice}
+          originalPrice={originalPrice}
+          setOriginalPrice={setOriginalPrice}
+          isContactPrice={isContactPrice}
+          setIsContactPrice={setIsContactPrice}
+          unit={unit}
+          setUnit={setUnit}
+          disabled={isSaving}
+        />
 
-          <ProductPricingFields
-            price={price}
-            setPrice={setPrice}
-            originalPrice={originalPrice}
-            setOriginalPrice={setOriginalPrice}
-            isContactPrice={isContactPrice}
-            setIsContactPrice={setIsContactPrice}
-            unit={unit}
-            setUnit={setUnit}
+        <ProductCategoryFields
+          categories={categories}
+          categoryId={categoryId}
+          setCategoryId={setCategoryId}
+          subcategoryId={subcategoryId}
+          setSubcategoryId={setSubcategoryId}
+          disabled={isSaving}
+        />
+
+        <ProductImagesField images={images} setImages={setImages} disabled={isSaving} />
+
+        <Field label="Mô tả sản phẩm">
+          <Textarea
+            rows={4}
             disabled={isSaving}
+            placeholder="Nhập thông tin mô tả chi tiết sản phẩm..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
+        </Field>
 
-          <ProductCategoryFields
-            categories={categories}
-            categoryId={categoryId}
-            setCategoryId={setCategoryId}
-            subcategoryId={subcategoryId}
-            setSubcategoryId={setSubcategoryId}
-            disabled={isSaving}
-          />
+        <ProductStatusToggles
+          isFeatured={isFeatured}
+          setIsFeatured={setIsFeatured}
+          inStock={inStock}
+          setInStock={setInStock}
+          disabled={isSaving}
+        />
 
-          <ProductImagesField
-            images={images}
-            setImages={setImages}
-            disabled={isSaving}
-          />
-
-          <div>
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
-              Mô tả sản phẩm
-            </label>
-            <textarea
-              rows={4}
-              disabled={isSaving}
-              placeholder="Nhập thông tin mô tả chi tiết sản phẩm..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl p-3 outline-none focus:border-sky-600 focus:bg-white"
-            />
-          </div>
-
-          <ProductStatusToggles
-            isFeatured={isFeatured}
-            setIsFeatured={setIsFeatured}
-            inStock={inStock}
-            setInStock={setInStock}
-            disabled={isSaving}
-          />
-
-          <ProductFormActions
-            onCancel={onClose}
-            isSaving={isSaving}
-            isEditing={Boolean(editingProduct)}
-          />
-        </form>
-      </div>
-    </div>,
-    document.body
+        <ProductFormActions
+          onCancel={onClose}
+          isSaving={isSaving}
+          isEditing={Boolean(editingProduct)}
+        />
+      </form>
+    </Modal>
   );
 }

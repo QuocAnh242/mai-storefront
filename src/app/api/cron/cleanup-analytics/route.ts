@@ -97,7 +97,7 @@ async function handleCronJob(req: NextRequest) {
 
         const totalViewsLast30Days = monthViewsData ? monthViewsData.length : 0;
         const totalVisitorsLast30Days = monthViewsData
-          ? new Set(monthViewsData.map((r: any) => r.visitor_id).filter(Boolean)).size
+          ? new Set(monthViewsData.map((r: { visitor_id?: string | null }) => r.visitor_id).filter(Boolean)).size
           : 0;
 
         // 2. Top 3 most-viewed products
@@ -107,7 +107,7 @@ async function handleCronJob(req: NextRequest) {
           .gte('created_at', thirtyDaysAgo);
 
         const prodCountMap: { [title: string]: number } = {};
-        (topProdData || []).forEach((row: any) => {
+        (topProdData || []).forEach((row: { product_title?: string | null }) => {
           const t = row.product_title || 'Sản phẩm';
           prodCountMap[t] = (prodCountMap[t] || 0) + 1;
         });
@@ -208,8 +208,8 @@ async function handleCronJob(req: NextRequest) {
         },
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Cleanup Analytics Cron Error]:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Cron failed' }, { status: 500 });
   }
 }

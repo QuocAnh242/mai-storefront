@@ -1,6 +1,62 @@
-import { supabaseAdmin } from '@/lib/supabase';
+import { revalidatePath } from 'next/cache';
+import { supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { withAdminRoute, ok, fail } from '@/lib/api/withAdminRoute';
 import { generateEntityId } from '@/lib/ids';
+import { INITIAL_CATEGORIES } from '@/shared/constants/initialData';
+
+function revalidateCategoryPaths() {
+  try {
+    revalidatePath('/');
+    revalidatePath('/products');
+  } catch {
+    // ignore outside Next runtime
+  }
+}
+
+// GET: Fetch nested categories + subcategories
+export const GET = withAdminRoute(
+  { rateLimit: { key: 'adm_cat_get', limit: 120, windowSeconds: 60 }, requireServiceRole: false },
+  async ({ auth }) => {
+    if (!isSupabaseAdminConfigured() || !supabaseAdmin) {
+      return ok({ data: INITIAL_CATEGORIES }, { newSession: auth.newSession });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('categories')
+      .select('id, name, slug, description, parent_id, created_at')
+      .order('name');
+
+    if (error) {
+      return fail(error.message, 500);
+    }
+
+    type CategoryRow = { id: string; name: string; slug: string; description?: string | null; parent_id?: string | null };
+    const rows = (data || []) as CategoryRow[];
+    if (rows.length === 0) {
+      return ok({ data: INITIAL_CATEGORIES }, { newSession: auth.newSession });
+    }
+
+    const mains = rows.filter((c) => !c.parent_id);
+    const subs = rows.filter((c) => Boolean(c.parent_id));
+
+    const mapped = mains.map((main) => ({
+      id: main.id,
+      name: main.name,
+      slug: main.slug,
+      description: main.description || '',
+      subcategories: subs
+        .filter((s) => s.parent_id === main.id)
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          slug: s.slug,
+          categoryId: main.id,
+        })),
+    }));
+
+    return ok({ data: mapped }, { newSession: auth.newSession });
+  },
+);
 
 // POST: Create a new category or subcategory
 export const POST = withAdminRoute(
@@ -35,7 +91,7 @@ export const POST = withAdminRoute(
 
     // Insert subcategories if provided
     if (Array.isArray(subcategories) && subcategories.length > 0) {
-      const subInserts = subcategories.map((sub: any) => ({
+      const subInserts = subcategories.map((sub: { id?: string; name?: string; slug?: string }) => ({
         id: sub.id || generateEntityId('sub'),
         name: sub.name?.trim() || 'Danh mục con',
         slug: sub.slug || generateEntityId('sub'),
@@ -45,6 +101,7 @@ export const POST = withAdminRoute(
       await supabaseAdmin!.from('categories').insert(subInserts);
     }
 
+    revalidateCategoryPaths();
     return ok({ data }, { message: 'Tạo danh mục thành công', newSession: auth.newSession });
   },
 );
@@ -60,7 +117,7 @@ export const PATCH = withAdminRoute(
       return fail('Thiếu ID danh mục', 400);
     }
 
-    const updatePayload: Record<string, any> = {};
+    const updatePayload: Record<string, unknown> = {};
     if (name !== undefined) updatePayload.name = name.trim();
     if (slug !== undefined) updatePayload.slug = slug;
     if (description !== undefined) updatePayload.description = description ? description.trim() : null;
@@ -110,6 +167,7 @@ export const PATCH = withAdminRoute(
       }
     }
 
+    revalidateCategoryPaths();
     return ok({ data: updatedCat }, { message: 'Cập nhật danh mục thành công', newSession: auth.newSession });
   },
 );
@@ -139,6 +197,7 @@ export const DELETE = withAdminRoute(
       return fail(error.message, 500);
     }
 
+    revalidateCategoryPaths();
     return ok({}, { message: 'Đã xóa danh mục thành công', newSession: auth.newSession });
   },
 );

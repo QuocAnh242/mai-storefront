@@ -32,11 +32,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = sessionStorage.getItem('mkt_cart');
     if (saved) {
-      try {
-        setCart(JSON.parse(saved));
-      } catch (e) {
-        console.error('Error loading cart:', e);
-      }
+      Promise.resolve().then(() => {
+        try {
+          setCart(JSON.parse(saved));
+        } catch (e) {
+          console.error('Error loading cart:', e);
+        }
+      });
     }
   }, []);
 

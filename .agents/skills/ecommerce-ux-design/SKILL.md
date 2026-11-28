@@ -2,77 +2,56 @@
 name: ecommerce-ux-design
 description: >-
   Complete UX/UI and shopper ergonomics guide for the MAI KIM TUYẾN store. Use whenever
-  designing, refactoring, or building storefront layouts, cart workflows, checkout funnels,
-  product display cards, mobile interactions, and trust signals.
+  designing, refactoring, or building storefront layouts, product discovery, product detail
+  pages, mobile interactions, and trust signals.
 ---
 
-# E-Commerce UX & Customer Experience Design
+# E-Commerce UX & Wholesale/Retail Lead Design
 
-This skill defines user-centered design patterns and conversion-rate optimization (CRO) best practices for the MAI KIM TUYẾN store.
+This skill defines user-centered UX patterns and conversion optimization for the MAI KIM TUYẾN storefront.
 
-## Shopper Profile & Context
+## Shopper Profile & Business Model
 
-- **Audience**: Vietnamese handicraft makers, school teachers, event planners, packaging businesses, and DIY enthusiasts.
+- **Audience**: Vietnamese handicraft makers, school teachers, event planners, construction/terrazzo workshops, packaging businesses, and retail DIY buyers.
 - **Device Profile**: 75%+ of traffic originates from mobile devices (via Zalo, Facebook, and mobile search).
-- **Payment Culture**: Heavy preference for quick VietQR bank transfer (PayOS) and Cash on Delivery (COD).
-- **Primary Objections**: Product authenticity, exact glitter grain size, true color under light, delivery speed, and wholesale pricing transparency.
+- **Buying Channel (IMPORTANT)**:
+  - The public storefront operates on a **Direct Contact / Quote Model (Zalo, Hotline, Messenger)** — customers contact directly for wholesale/retail pricing, grain sizing, color charts, and shipping.
+  - **Online Cart / Self-Checkout / PayOS on the storefront is UNPUBLIC/DISABLED.** Do NOT add "Thêm vào giỏ", "Mua ngay", Cart Drawer triggers, or public payment forms to storefront pages unless explicitly requested by the owner.
+- **Primary Shopper Objections**: True color under light, exact glitter grain size (`0.2mm`, `0.4mm`, `1mm`, `1/128`, `1/96`...), stock availability, and chành xe / nationwide delivery transparency.
 
 ---
 
-## 1. Mobile-First Ergonomics
+## 1. Mobile-First Ergonomics (`375px` Baseline)
 
-1. **Touch Target Size**:
-   - All interactive controls (buttons, quantity pickers, variant selectors) must have a minimum touch area of `44x44px`.
-2. **Sticky Mobile Action Bar**:
-   - On product detail pages (`/products/[...slug]`), provide a fixed bottom bar on mobile (`sm:hidden`) with:
-     - Clear unit price display.
-     - Primary button: "Thêm vào giỏ" / "Mua ngay".
-     - Quick hotline/Zalo consultation link.
-3. **Zero Horizontal Overflow**:
-   - Every table, grid, and image gallery must adapt responsively (`overflow-x-auto` with clean scroll indicators if tables are required).
-4. **Form Inputs**:
-   - Explicit `inputMode` attributes (`numeric` for phone numbers and quantities).
-   - Instant inline error messages below the field rather than alert modals.
+1. **Touch Target Size**: All interactive controls (buttons, pills, gallery arrows) must have a comfortable touch area (`>= 40-44px` height on primary CTAs).
+2. **Sticky Mobile Action Bar (PDP)**:
+   - Fixed bottom bar on mobile (`sm:hidden`) using `.glass-nav-light`.
+   - Must check `isContactProduct(product)` (`isContactPrice || price <= 1`): show `"Liên hệ báo giá"` instead of `"0 ₫"` or `"1 ₫"`.
+   - Actions: Quick Call button + prominent `"Zalo Báo Giá Sỉ"` CTA.
+3. **Coordinated Floating Dock**:
+   - Combine `FloatingChatWidget` and `ScrollToTop` inside a single `FloatingActionDock` so spacing adjusts cleanly when a mobile sticky bar is present — never hardcode magic pixel offsets across separate files.
+4. **Zero Horizontal Overflow**: Every grid, category scroll bar, and specs table must fit `375px` cleanly without page-level horizontal scrolling.
 
 ---
 
-## 2. Product Detail Page (PDP) Architecture
+## 2. Unified Product Discovery & Filtering
 
-Organize product information to resolve purchasing friction in seconds:
-
-1. **Visual Proof**:
-   - Image carousel with thumbnail navigation.
-   - High-resolution close-ups highlighting grain texture and real light reflection.
-2. **Pricing & Unit Transparency**:
-   - High-contrast price (`text-slate-900 font-bold text-xl`).
-   - Clearly state the unit: "hũ 100g", "bịch 500g", "kg", "cuộn".
-   - Original crossed-out price (`line-through text-slate-400 text-sm`) only when a genuine discount exists.
-3. **Specifications Table**:
-   - Clean 1px border grid detailing:
-     - Kích thước hạt (Grain size): 0.2mm (siêu mịn), 0.4mm, 1mm (hạt to).
-     - Chất liệu (Material): PET chịu nhiệt, không phai màu.
-     - Ứng dụng (Application): Làm slime, tranh cát, trang trí nail, làm hoa sáp.
-4. **Real Customer Reviews**:
-   - Average rating breakdown, verified purchase badges, customer photos, and shop responses.
+1. **Single URL Source of Truth (`/products`)**:
+   - Filters (`category`, `sub`, `q`, `price`, `sort`, `page`) must live in URL search params via `nuqs`.
+   - Clicking a category or subcategory in Header MegaMenu, CategoryTabs, Homepage CategoryScrollBar, or Footer must navigate cleanly and preserve shareable URLs.
+2. **Accent-Insensitive Vietnamese Search**:
+   - Always use `filterProductsBySearch()` / `normalizeSearchQuery()` from `src/lib/searchUtils.ts`.
 
 ---
 
-## 3. Frictionless Checkout Funnel
+## 3. Product Detail Page (PDP) Architecture
 
-1. **Single-Page Checkout**:
-   - Avoid multi-step wizard traps. Combine Customer Info, Shipping Address, and Payment Method on a single readable view.
-2. **VietQR Payment Flow**:
-   - Generate instant VietQR using PayOS.
-   - Display order code, exact amount, and real-time polling or webhook status listener.
-   - Prominently show download QR button and bank details for manual copy-pasting.
-3. **Cart Drawer / Mini-Cart**:
-   - Slide-over cart preview with instant quantity adjustment (`+` / `-`).
-   - Clear subtotal calculation with no hidden fees.
-
----
-
-## 4. Trust Signals & Reassurance
-
-- Highlight official hotline & Zalo directly in the navigation and footer.
-- Clearly present shop guarantees: "Kiểm tra hàng trước khi thanh toán", "Đổi trả trong 7 ngày nếu lỗi xưởng".
-- Professional shop replies on product reviews to demonstrate active customer support.
+1. **Visual Proof**: Swipeable image carousel (`next/image` with crisp sizing) + fullscreen lightbox zoom.
+2. **Stock & Pricing Transparency**:
+   - Reflect real `product.inStock` status (`Sẵn kho TP.HCM` vs `Tạm hết hàng / Liên hệ đặt trước`).
+   - Display `formatVND(product.price)` or `"Liên hệ báo giá"` via `isContactProduct()`, plus genuine `originalPrice` strikethrough and savings badge.
+3. **Specifications Table (`product.specs`)**:
+   - Render `product.specs` cleanly (e.g. Kích thước hạt, Chất liệu, Quy cách đóng gói, Ứng dụng) whenever present.
+4. **Real Customer Reviews & Trust Signals**:
+   - Verified review summary, customer feedback, shop replies, and trust guarantees ("Hỗ trợ gửi chành xe toàn quốc", "Đổi trả nếu sai quy cách").
+5. **No Broken Links**: All footer policy/support links (e.g. `/privacy-policy`, `/return-policy`, `/contact`) must resolve to real pages.

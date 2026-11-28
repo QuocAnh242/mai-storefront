@@ -18,8 +18,6 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 

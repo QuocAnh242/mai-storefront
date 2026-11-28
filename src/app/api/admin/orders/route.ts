@@ -66,7 +66,7 @@ export const PATCH = withAdminRoute(
       return fail('Thiếu mã đơn hàng', 400);
     }
 
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Record<string, unknown> = {
       payment_status: status,
     };
     if (status === 'paid') {

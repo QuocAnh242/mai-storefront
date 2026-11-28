@@ -1,6 +1,5 @@
-'use client';
-
 import React from 'react';
+import Link from 'next/link';
 import { Product } from '@/shared/types';
 import { ProductCard } from '../products/ProductCard';
 
@@ -9,7 +8,7 @@ interface StorefrontCategorySectionProps {
   subtitle: string;
   products: Product[];
   maxDisplay?: number;
-  onViewMore?: () => void;
+  viewMoreHref?: string;
   viewMoreLabel?: string;
   emptyText?: string;
 }
@@ -19,7 +18,7 @@ export function StorefrontCategorySection({
   subtitle,
   products,
   maxDisplay = 4,
-  onViewMore,
+  viewMoreHref,
   viewMoreLabel,
   emptyText = 'Đang cập nhật danh mục...',
 }: StorefrontCategorySectionProps) {
@@ -39,13 +38,13 @@ export function StorefrontCategorySection({
           <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full shrink-0">
             {products.length} sản phẩm
           </span>
-          {remainingCount > 0 && onViewMore && (
-            <button
-              onClick={onViewMore}
-              className="hidden sm:inline-block text-xs font-bold text-sky-900 hover:underline cursor-pointer ml-1"
+          {remainingCount > 0 && viewMoreHref && (
+            <Link
+              href={viewMoreHref}
+              className="hidden sm:inline-block text-xs font-bold text-sky-900 hover:underline ml-1"
             >
               Xem tất cả →
-            </button>
+            </Link>
           )}
         </div>
       </div>
@@ -58,19 +57,19 @@ export function StorefrontCategorySection({
             ))}
           </div>
 
-          {remainingCount > 0 && onViewMore && (
+          {remainingCount > 0 && viewMoreHref && (
             <div className="flex justify-center pt-2">
-              <button
-                onClick={onViewMore}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-98 transition-all cursor-pointer"
+              <Link
+                href={viewMoreHref}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
                 Xem thêm {remainingCount} {viewMoreLabel || 'sản phẩm'} →
-              </button>
+              </Link>
             </div>
           )}
         </>
       ) : (
-        <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
+        <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200">
           <p className="text-xs text-slate-400">{emptyText}</p>
         </div>
       )}

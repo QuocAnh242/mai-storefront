@@ -16,7 +16,7 @@ export function FooterWhyUs() {
           </p>
         </div>
 
-        {/* 4 Stats Grid: Grounded, Honest, No Exaggeration */}
+        {/* 4 Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 pt-2">
           <div>
             <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-tight">

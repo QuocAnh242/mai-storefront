@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/shared/context/CartContext";
 import {
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { CheckoutModal } from "./CheckoutModal";
 
+const subscribeNoop = () => () => {};
+
 export function CartDrawer() {
   const {
     cart,
@@ -28,31 +30,27 @@ export function CartDrawer() {
   } = useCart();
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [orderNote, setOrderNote] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // Trigger smooth slide animation when cart opens/closes
   useEffect(() => {
-    if (isCartOpen) {
-      const timer = setTimeout(() => setIsAnimating(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsAnimating(false);
-    }
+    const timer = setTimeout(() => setIsAnimating(isCartOpen), 10);
+    return () => clearTimeout(timer);
   }, [isCartOpen]);
 
-  const handleCloseDrawer = () => {
+  const handleCloseDrawer = useCallback(() => {
     setIsAnimating(false);
     setTimeout(() => {
       setIsCartOpen(false);
     }, 300);
-  };
+  }, [setIsCartOpen]);
 
   // Close drawer on ESC key
   useEffect(() => {
@@ -63,7 +61,7 @@ export function CartDrawer() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isCartOpen]);
+  }, [isCartOpen, handleCloseDrawer]);
 
   if (!isCartOpen || !mounted) return null;
 

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import { Product, Order } from "@/shared/types";
-import { useStore } from "@/shared/context/StoreContext";
+import { createOrderDraft } from "./createOrderDraft";
 import { generateOrderQrUrl } from "@/lib/payos";
 import {
   X,
@@ -21,8 +22,9 @@ interface QuickBuyModalProps {
   onClose: () => void;
 }
 
+const subscribeNoop = () => () => {};
+
 export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
-  const { createOrder } = useStore();
   const [quantity, setQuantity] = useState(1);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -35,11 +37,11 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   // ESC key listener to close modal
   useEffect(() => {
@@ -59,13 +61,13 @@ export function QuickBuyModal({ product, onClose }: QuickBuyModalProps) {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !customerPhone) {
-      alert("Vui lòng điền họ tên và số điện thoại của bạn!");
+      toast.error("Vui lòng điền họ tên và số điện thoại của bạn!");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const order = await createOrder({
+      const order = await createOrderDraft({
         customerName,
         customerPhone,
         customerAddress,

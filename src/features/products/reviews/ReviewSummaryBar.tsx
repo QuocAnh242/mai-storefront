@@ -8,6 +8,7 @@ interface ReviewSummaryBarProps {
   averageRating: number;
   totalReviews: number;
   reviews: ProductReview[];
+  ratingBreakdown?: Record<number, number>;
   onOpenModal: () => void;
 }
 
@@ -15,11 +16,12 @@ export function ReviewSummaryBar({
   averageRating,
   totalReviews,
   reviews,
+  ratingBreakdown,
   onOpenModal,
 }: ReviewSummaryBarProps) {
   const counts = [5, 4, 3, 2, 1].map((star) => ({
     star,
-    count: reviews.filter((r) => r.rating === star).length,
+    count: ratingBreakdown?.[star] ?? reviews.filter((r) => r.rating === star).length,
   }));
 
   return (

@@ -31,11 +31,19 @@ export const GET = withAdminRoute(
       : Math.max(1, Math.min(100, parseInt(pageSizeParam || "20", 10)));
     const q = searchParams.get("q")?.trim();
     const categoryId = searchParams.get("categoryId")?.trim();
+    const status = searchParams.get("status")?.trim();
 
     let query = supabaseAdmin!.from("products").select("*", { count: "exact" });
 
     if (categoryId && categoryId !== "all") {
       query = query.eq("category_id", categoryId);
+    }
+    if (status === "featured") {
+      query = query.eq("is_featured", true);
+    } else if (status === "in_stock") {
+      query = query.eq("in_stock", true);
+    } else if (status === "out_of_stock") {
+      query = query.eq("in_stock", false);
     }
     if (q) {
       query = query.or(
@@ -279,7 +287,7 @@ export const PATCH = withAdminRoute(
       return fail("MISSING_ID", 400, "Thiếu ID sản phẩm");
     }
 
-    const dbPayload: Record<string, any> = {};
+    const dbPayload: Record<string, unknown> = {};
     if (updatedFields.title !== undefined) {
       dbPayload.title = updatedFields.title.trim();
     }

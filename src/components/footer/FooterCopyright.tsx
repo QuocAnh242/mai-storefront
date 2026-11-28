@@ -12,17 +12,17 @@ export function FooterCopyright() {
         </span>
         <div className="flex items-center gap-4 text-[10px] text-sky-300/50">
           <Link
-            href="/chinh-sach-bao-mat"
+            href="/privacy-policy"
             className="hover:text-sky-200 transition-colors"
           >
             Chính sách bảo mật
           </Link>
           <span>·</span>
           <Link
-            href="/chinh-sach-doi-tra"
+            href="/return-policy"
             className="hover:text-sky-200 transition-colors"
           >
-            Điều khoản dịch vụ
+            Chính sách đổi trả
           </Link>
         </div>
       </div>

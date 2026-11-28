@@ -1,6 +1,17 @@
+import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase';
 import { withAdminRoute, ok, fail } from '@/lib/api/withAdminRoute';
 import { generateEntityId } from '@/lib/ids';
+
+function revalidateBlogPaths() {
+  try {
+    revalidatePath('/news');
+    revalidatePath('/news/[slug]', 'page');
+    revalidatePath('/sitemap.xml');
+  } catch {
+    // ignore outside Next runtime
+  }
+}
 
 // GET: Fetch blogs with server pagination and filtering
 export const GET = withAdminRoute(
@@ -103,6 +114,7 @@ export const POST = withAdminRoute(
       return fail(error.message, 500);
     }
 
+    revalidateBlogPaths();
     return ok({ data }, { message: 'Tạo bài viết thành công', newSession: auth.newSession });
   },
 );
@@ -118,7 +130,7 @@ export const PATCH = withAdminRoute(
       return fail('Thiếu ID bài viết', 400);
     }
 
-    const dbPayload: Record<string, any> = {};
+    const dbPayload: Record<string, unknown> = {};
     if (updatedFields.title !== undefined) dbPayload.title = updatedFields.title.trim();
     if (updatedFields.slug !== undefined) dbPayload.slug = updatedFields.slug;
     if (updatedFields.category !== undefined) dbPayload.category = updatedFields.category;
@@ -145,6 +157,7 @@ export const PATCH = withAdminRoute(
       return fail('Không tìm thấy bài viết để cập nhật', 404);
     }
 
+    revalidateBlogPaths();
     return ok({ data }, { message: 'Cập nhật bài viết thành công', newSession: auth.newSession });
   },
 );
@@ -170,6 +183,7 @@ export const DELETE = withAdminRoute(
       return fail(error.message, 500);
     }
 
+    revalidateBlogPaths();
     return ok({}, { message: 'Đã xóa bài viết thành công', newSession: auth.newSession });
   },
 );

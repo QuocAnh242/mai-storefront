@@ -5,9 +5,11 @@ import { X } from 'lucide-react';
 
 interface CatalogActiveBadgesProps {
   selectedCategoryName?: string;
+  selectedSubName?: string;
   selectedPriceRange?: string;
   searchQuery?: string;
   onClearCategory: () => void;
+  onClearSub: () => void;
   onClearPrice: () => void;
   onClearSearch: () => void;
   onClearAll: () => void;
@@ -15,15 +17,17 @@ interface CatalogActiveBadgesProps {
 
 export function CatalogActiveBadges({
   selectedCategoryName,
+  selectedSubName,
   selectedPriceRange,
   searchQuery,
   onClearCategory,
+  onClearSub,
   onClearPrice,
   onClearSearch,
   onClearAll,
 }: CatalogActiveBadgesProps) {
   const hasActiveFilters = Boolean(
-    selectedCategoryName || selectedPriceRange || searchQuery
+    selectedCategoryName || selectedSubName || selectedPriceRange || searchQuery,
   );
 
   if (!hasActiveFilters) return null;
@@ -54,6 +58,20 @@ export function CatalogActiveBadges({
             onClick={onClearCategory}
             className="hover:text-rose-600 transition-colors cursor-pointer"
             aria-label="Xóa bộ lọc danh mục"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      )}
+
+      {selectedSubName && (
+        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-full font-semibold">
+          <span>{selectedSubName}</span>
+          <button
+            type="button"
+            onClick={onClearSub}
+            className="hover:text-rose-600 transition-colors cursor-pointer"
+            aria-label="Xóa bộ lọc phân loại"
           >
             <X className="w-3 h-3" />
           </button>

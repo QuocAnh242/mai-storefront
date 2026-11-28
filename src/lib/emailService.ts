@@ -169,8 +169,8 @@ export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): P
   `;
 
   // Check whether the sending domain has been verified
-  let fromAddress = 'Mai Kim Tuyến <thongbao@maikimtuyen.io.vn>';
-  let recipients = toEmails;
+  const fromAddress = 'Mai Kim Tuyến <thongbao@maikimtuyen.io.vn>';
+  const recipients = toEmails;
 
   try {
     // Try sending via the primary domain maikimtuyen.io.vn
@@ -219,8 +219,8 @@ export async function sendCleanupNoticeEmail(params: SendCleanupReportParams): P
     }
 
     return { success: true, messageId: data.id };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[EmailService Error]:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : 'Email send error' };
   }
 }

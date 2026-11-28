@@ -71,7 +71,27 @@ export async function GET(req: NextRequest) {
       repliedAt: r.replied_at || undefined,
     }));
 
+    const pageParam = Number(searchParams.get('page'));
+    const limitParam = Number(searchParams.get('limit'));
+    const hasPagination = Number.isFinite(limitParam) && limitParam > 0;
+    const limit = hasPagination ? Math.min(50, Math.floor(limitParam)) : reviews.length || 10;
     const totalReviews = reviews.length;
+    const totalPages = Math.max(1, Math.ceil(totalReviews / limit));
+    const currentPage =
+      hasPagination && Number.isFinite(pageParam) && pageParam > 0
+        ? Math.min(Math.floor(pageParam), totalPages)
+        : 1;
+
+    const paginatedReviews = hasPagination
+      ? reviews.slice((currentPage - 1) * limit, currentPage * limit)
+      : reviews;
+
+    const ratingBreakdown: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    for (const rev of reviews) {
+      const star = Math.min(5, Math.max(1, Math.round(rev.rating)));
+      ratingBreakdown[star] = (ratingBreakdown[star] || 0) + 1;
+    }
+
     const averageRating =
       totalReviews > 0
         ? Number((reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1))
@@ -79,14 +99,21 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: reviews,
+      data: paginatedReviews,
+      pagination: {
+        page: currentPage,
+        limit,
+        total: totalReviews,
+        totalPages,
+      },
       stats: {
         averageRating,
         totalReviews,
+        ratingBreakdown,
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to fetch reviews' }, { status: 500 });
   }
 }
 
@@ -183,7 +210,15 @@ export async function POST(req: NextRequest) {
       }
     } catch {}
 
-    let insertedData: any = null;
+    type InsertedReview = {
+      id: string;
+      product_id: string;
+      author_name: string;
+      rating: number;
+      content: string;
+      created_at: string;
+    };
+    let insertedData: InsertedReview | null = null;
 
     if (moderation.isApproved || isSupabaseAdminConfigured()) {
       const { data, error } = await client
@@ -247,7 +282,7 @@ export async function POST(req: NextRequest) {
           }
         : null,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to fetch reviews' }, { status: 500 });
   }
 }

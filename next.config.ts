@@ -34,6 +34,31 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: '/chinh-sach-bao-mat',
+        destination: '/privacy-policy',
+        permanent: true,
+      },
+      {
+        source: '/chinh-sach-doi-tra',
+        destination: '/return-policy',
+        permanent: true,
+      },
+      {
+        source: '/huong-dan-mua-hang',
+        destination: '/contact',
+        permanent: true,
+      },
+      {
+        source: '/cach-thuc-giao-hang',
+        destination: '/shipping-policy',
+        permanent: true,
+      },
+      {
+        source: '/chinh-sach-giao-hang',
+        destination: '/shipping-policy',
+        permanent: true,
+      },
+      {
         source: '/admin/san-pham',
         destination: '/admin/products',
         permanent: true,

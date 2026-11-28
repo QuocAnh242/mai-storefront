@@ -38,8 +38,8 @@ export function ProductImagesField({
         uploadedUrls.push(data.url);
       }
       setImages((prev) => [...prev, ...uploadedUrls]);
-    } catch (err: any) {
-      setUploadError(err.message || 'Upload ảnh thất bại, thử lại!');
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Upload ảnh thất bại, thử lại!');
     } finally {
       setIsUploading(false);
       e.target.value = '';

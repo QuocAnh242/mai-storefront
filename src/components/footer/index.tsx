@@ -25,9 +25,3 @@ export function Footer() {
     </footer>
   );
 }
-
-export { FooterWhyUs } from './FooterWhyUs';
-export { FooterWave } from './FooterWave';
-export { FooterCtaBar } from './FooterCtaBar';
-export { FooterColumns } from './FooterColumns';
-export { FooterCopyright } from './FooterCopyright';

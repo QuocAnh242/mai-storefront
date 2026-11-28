@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     response.cookies.set('mkt_admin_logged_in', '', { path: '/', maxAge: 0 });
 
     return response;
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Logout failed' }, { status: 500 });
   }
 }

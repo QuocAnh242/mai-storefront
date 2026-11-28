@@ -4,7 +4,7 @@ import crypto from 'crypto';
  * PayOS webhook signature verification (HMAC SHA256 over sorted key=value pairs).
  */
 export function verifyPayOSSignature(
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   signature: string,
   checksumKey: string,
 ): boolean {

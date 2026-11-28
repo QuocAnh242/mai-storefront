@@ -5,7 +5,7 @@ import { verifyPayOSSignature } from '@/lib/payosSignature';
 describe('verifyPayOSSignature', () => {
   const checksumKey = 'test_checksum_key_secret_12345';
 
-  function createValidSignature(data: Record<string, any>, key: string): string {
+  function createValidSignature(data: Record<string, unknown>, key: string): string {
     const sortedKeys = Object.keys(data).sort();
     const dataStr = sortedKeys.map((k) => `${k}=${data[k] ?? ''}`).join('&');
     return crypto.createHmac('sha256', key).update(dataStr).digest('hex');

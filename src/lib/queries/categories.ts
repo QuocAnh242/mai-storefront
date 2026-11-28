@@ -1,3 +1,4 @@
+import 'server-only';
 import { supabase, isSupabaseConfigured, supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { Category, SubCategory } from '@/shared/types';
 import { INITIAL_CATEGORIES } from '@/shared/constants/initialData';
@@ -26,17 +27,25 @@ export async function getCategories(): Promise<Category[]> {
       return INITIAL_CATEGORIES;
     }
 
-    const parentCats = data.filter((c: any) => !c.parent_id);
-    const subCats = data.filter((c: any) => c.parent_id);
+    type DbCategoryRow = {
+      id: string;
+      name: string;
+      slug: string;
+      description?: string | null;
+      parent_id?: string | null;
+    };
+    const rows = data as DbCategoryRow[];
+    const parentCats = rows.filter((c) => !c.parent_id);
+    const subCats = rows.filter((c) => c.parent_id);
 
-    return parentCats.map((parent: any) => ({
+    return parentCats.map((parent) => ({
       id: parent.id,
       name: parent.name,
       slug: parent.slug,
       description: parent.description || undefined,
       subcategories: subCats
-        .filter((sub: any) => sub.parent_id === parent.id)
-        .map((sub: any): SubCategory => ({
+        .filter((sub) => sub.parent_id === parent.id)
+        .map((sub): SubCategory => ({
           id: sub.id,
           name: sub.name,
           slug: sub.slug,

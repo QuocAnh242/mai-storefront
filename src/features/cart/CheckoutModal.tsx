@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/shared/context/CartContext";
-import { useStore } from "@/shared/context/StoreContext";
+import { createOrderDraft } from "@/features/checkout/createOrderDraft";
 import { useToast } from "@/shared/context/ToastContext";
 import {
   X,
@@ -13,15 +13,16 @@ import {
   ShieldCheck,
   CheckCircle2,
 } from "lucide-react";
-import { PaymentMethod } from "@/shared/types";
+import { Order, PaymentMethod } from "@/shared/types";
 
 interface CheckoutModalProps {
   onClose: () => void;
 }
 
+const subscribeNoop = () => () => {};
+
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { cart, subtotalAmount, clearCart } = useCart();
-  const { createOrder } = useStore();
   const { showToast } = useToast();
 
   const [customerName, setCustomerName] = useState("");
@@ -30,12 +31,12 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const [customerNote, setCustomerNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("payos_qr");
   const [loading, setLoading] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<any>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   // ESC key listener to close modal
   useEffect(() => {
@@ -84,7 +85,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
         quantity: item.quantity,
       }));
 
-      const newOrder = await createOrder({
+      const newOrder = await createOrderDraft({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerAddress: customerAddress.trim(),
@@ -124,8 +125,8 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
       clearCart();
       setCompletedOrder(newOrder);
       showToast("Đặt hàng thành công! Cảm ơn quý khách.", "success");
-    } catch (err: any) {
-      showToast(err.message || "Lỗi xử lý đơn hàng", "error");
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Lỗi xử lý đơn hàng", "error");
     } finally {
       setLoading(false);
     }

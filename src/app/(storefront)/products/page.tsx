@@ -1,9 +1,10 @@
 import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { getCategories, getProducts } from '@/lib/queries';
 import { ProductCatalogView } from '@/features/catalog/ProductCatalogView';
 import { Loading } from '@/components/ui/Loading';
 
-export const revalidate = 60; // ISR: 60s
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Tất Cả Sản Phẩm - Bột Kim Tuyến, Bột Màu, Băng Keo Sỉ Lẻ',
@@ -22,7 +23,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SanPhamPage() {
+export default async function ProductsPage() {
+  const [productsRes, categories] = await Promise.all([
+    getProducts({ limit: 300 }),
+    getCategories(),
+  ]);
+
   return (
     <Suspense
       fallback={
@@ -35,7 +41,10 @@ export default function SanPhamPage() {
         </div>
       }
     >
-      <ProductCatalogView />
+      <ProductCatalogView
+        initialProducts={productsRes.products}
+        initialCategories={categories}
+      />
     </Suspense>
   );
 }

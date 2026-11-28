@@ -187,7 +187,7 @@ export const PATCH = withAdminRoute(
     // 2. Edit review
     if (action === "edit") {
       const { authorName, rating, content } = body;
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, unknown> = {};
 
       if (authorName)
         updatePayload.author_name = sanitizeText(authorName.trim());

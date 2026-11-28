@@ -90,7 +90,7 @@ export const GET = withAdminRoute(
             dbConnected = true;
             todayViews = todayViewsData.length;
             todayVisitors = new Set(
-              todayViewsData.map((r: any) => r.visitor_id).filter(Boolean),
+              todayViewsData.map((r: { visitor_id?: string | null }) => r.visitor_id).filter(Boolean),
             ).size;
           }
         }
@@ -114,7 +114,7 @@ export const GET = withAdminRoute(
             [dateStr: string]: { views: number; visitors: Set<string> };
           } = {};
 
-          (trendData || []).forEach((row: any) => {
+          (trendData || []).forEach((row: { created_at: string; visitor_id?: string | null }) => {
             const dateStr = new Date(row.created_at)
               .toISOString()
               .split("T")[0];
@@ -149,7 +149,7 @@ export const GET = withAdminRoute(
             const counts: {
               [id: string]: { id: string; title: string; views: number };
             } = {};
-            prodViews.forEach((row: any) => {
+            prodViews.forEach((row: { product_id: string; product_title?: string | null }) => {
               if (!counts[row.product_id]) {
                 counts[row.product_id] = {
                   id: row.product_id,

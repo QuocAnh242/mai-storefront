@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Product } from '@/shared/types';
-import { GripVertical, Star, Trash2, Edit, Tag, Eye } from 'lucide-react';
+import { GripVertical, Star, Trash2, Edit } from 'lucide-react';
+import { formatVND, getSafeImageUrl } from '@/lib/format';
 
 interface DragDropProductListProps {
   products: Product[];
@@ -32,10 +34,6 @@ export function DragDropProductList({
     }));
 
     onReorder(updated);
-  };
-
-  const formatVND = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
   return (
@@ -89,11 +87,15 @@ export function DragDropProductList({
                           #{index + 1}
                         </span>
 
-                        <img
-                          src={product.images[0]}
-                          alt={product.title}
-                          className="w-12 h-12 object-cover rounded-lg border border-slate-200"
-                        />
+                        <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                          <Image
+                            src={getSafeImageUrl(product.images?.[0])}
+                            alt={product.title}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        </div>
 
                         <div>
                           <h4 className="font-bold text-slate-900 text-sm">{product.title}</h4>

@@ -1,3 +1,4 @@
+import 'server-only';
 import { supabase, isSupabaseConfigured, supabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase';
 import { BlogPost } from '@/shared/types';
 import { INITIAL_BLOGS } from '@/shared/constants/initialData';
@@ -7,7 +8,21 @@ function getClient() {
   return supabase;
 }
 
-function mapBlogRow(row: any): BlogPost {
+interface DbBlogRow {
+  id: string;
+  title: string;
+  slug: string;
+  category?: string | null;
+  thumbnail?: string | null;
+  summary?: string | null;
+  content?: string | null;
+  sections?: BlogPost['sections'] | null;
+  author?: string | null;
+  is_published?: boolean | null;
+  created_at?: string | null;
+}
+
+function mapBlogRow(row: DbBlogRow): BlogPost {
   return {
     id: row.id,
     title: row.title,

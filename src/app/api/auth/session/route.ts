@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     const cookieStore = await cookies();
-    let accessToken = cookieStore.get("sb-access-token")?.value;
+    const accessToken = cookieStore.get("sb-access-token")?.value;
     const refreshToken = cookieStore.get("sb-refresh-token")?.value;
 
     let isTokenValid = false;
@@ -89,9 +89,9 @@ export async function GET(req: NextRequest) {
         refresh_token: refreshToken || "",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { session: null, error: error.message },
+      { session: null, error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },
     );
   }

@@ -1,119 +1,82 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Order } from '@/shared/types';
-import { useToast } from '@/shared/context/ToastContext';
+import { adminFetch, DbOrderRow, mapAdminOrder } from '@/features/admin/hooks/adminFetcher';
 
 export function useOrders() {
-  const { showToast } = useToast();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(20);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending'>('all');
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('pageSize', String(pageSize));
+  const query = useQuery({
+    queryKey: ['admin', 'orders', { page, pageSize, searchQuery, statusFilter }],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery.trim()) params.set('q', searchQuery.trim());
 
-      const res = await fetch(`/api/admin/orders?${params.toString()}`);
-      if (!res.ok) {
-        showToast('Không thể tải danh sách đơn hàng', 'error');
-        return;
-      }
-      const json = await res.json();
-      if (json.success) {
-        // Map DB snake_case to Order model if necessary
-        const mapped: Order[] = (json.data || []).map((o: any) => ({
-          id: o.id,
-          orderCode: o.order_code || o.orderCode,
-          customerName: o.customer_name || o.customerName,
-          customerPhone: o.customer_phone || o.customerPhone,
-          customerAddress: o.customer_address || o.customerAddress,
-          notes: o.notes,
-          totalAmount: Number(o.total_amount || o.totalAmount) || 0,
-          paymentStatus: o.payment_status || o.paymentStatus,
-          paymentMethod: o.payment_method || o.paymentMethod,
-          shippingMethod: o.shipping_method || o.shippingMethod,
-          items: Array.isArray(o.items) ? o.items : [],
-          createdAt: o.created_at || o.createdAt,
-          paidAt: o.paid_at || o.paidAt,
-        }));
-        setOrders(mapped);
-        setTotal(json.total || mapped.length);
-        setTotalPages(json.totalPages || 1);
-      }
-    } catch (err: any) {
-      console.warn('[useOrders error]:', err);
-      showToast(err.message || 'Lỗi kết nối tải đơn hàng', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, statusFilter, searchQuery, showToast]);
+      const json = await adminFetch<{ data: DbOrderRow[]; total: number; totalPages: number }>(
+        `/api/admin/orders?${params.toString()}`,
+      );
+      return {
+        orders: (json.data || []).map(mapAdminOrder),
+        total: json.total || 0,
+        totalPages: json.totalPages || 1,
+      };
+    },
+  });
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  const updateStatus = async (orderCode: string, status: Order['paymentStatus']) => {
-    try {
-      const res = await fetch('/api/admin/orders', {
+  const updateMutation = useMutation({
+    mutationFn: ({ orderCode, status }: { orderCode: string; status: Order['paymentStatus'] }) =>
+      adminFetch('/api/admin/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderCode, status }),
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        showToast('Cập nhật trạng thái thành công', 'success');
-        setOrders((prev) =>
-          prev.map((o) => (o.orderCode === orderCode ? { ...o, paymentStatus: status } : o)),
-        );
-      } else {
-        showToast(json.message || 'Lỗi cập nhật trạng thái', 'error');
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Lỗi kết nối', 'error');
-    }
-  };
+      }),
+    onSuccess: () => {
+      toast.success('Cập nhật trạng thái thành công');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
-  const removeOrder = async (orderCode: string): Promise<{ success: boolean; message: string }> => {
-    try {
-      const res = await fetch(`/api/admin/orders?orderCode=${encodeURIComponent(orderCode)}`, {
+  const deleteMutation = useMutation({
+    mutationFn: (orderCode: string) =>
+      adminFetch(`/api/admin/orders?orderCode=${encodeURIComponent(orderCode)}`, {
         method: 'DELETE',
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setOrders((prev) => prev.filter((o) => o.orderCode !== orderCode));
-        setTotal((prev) => Math.max(0, prev - 1));
-        return { success: true, message: json.message || 'Đã xóa đơn hàng' };
-      }
-      return { success: false, message: json.message || 'Không thể xóa đơn hàng' };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Lỗi kết nối' };
-    }
-  };
+      }),
+    onSuccess: () => {
+      toast.success('Đã xóa đơn hàng');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   return {
-    orders,
-    loading,
+    orders: query.data?.orders || [],
+    loading: query.isLoading,
     page,
     setPage,
-    totalPages,
-    total,
+    totalPages: query.data?.totalPages || 1,
+    total: query.data?.total || 0,
     searchQuery,
     setSearchQuery,
     statusFilter,
     setStatusFilter,
-    updateStatus,
-    removeOrder,
-    refetch: fetchOrders,
+    updateStatus: (orderCode: string, status: Order['paymentStatus']) =>
+      updateMutation.mutate({ orderCode, status }),
+    removeOrder: async (orderCode: string) => {
+      try {
+        await deleteMutation.mutateAsync(orderCode);
+        return { success: true, message: 'Đã xóa đơn hàng' };
+      } catch (err) {
+        return { success: false, message: (err as Error).message };
+      }
+    },
+    refetch: query.refetch,
   };
 }
